@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黑名单状态查询 - 自习室预约系统</title>
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .status-card {
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        .status-card:hover {
+            transform: translateY(-5px);
+        }
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+        }
+        .appeal-form {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/index/">
+                <i class="fas fa-book-reader me-2"></i>
+                自习室预约系统
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/index/">
+                    <i class="fas fa-home me-1"></i>首页
+                </a>
+                <a class="nav-link active" href="{% url 'blacklist_management' %}">
+                    <i class="fas fa-ban me-1"></i>黑名单状态
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 用户信息卡片 -->
+        <div class="card status-card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user me-2"></i>用户信息
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-2 text-center">
+                        <img src="/media/{{ current_user.photo }}" class="rounded-circle user-avatar" alt="用户头像">
+                    </div>
+                    <div class="col-md-10">
+                        <h4>{{ current_user.name }}</h4>
+                        <p class="text-muted mb-1">电话: {{ current_user.phone }}</p>
+                        <p class="text-muted">邮箱: {{ current_user.email }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 黑名单状态卡片 -->
+        <div class="card status-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-shield-alt me-2"></i>黑名单状态
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if blacklist_record %}
+                    <!-- 在黑名单中 -->
+                    <div class="alert alert-danger">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                            <div>
+                                <h5 class="alert-heading">您当前处于黑名单状态</h5>
+                                <p class="mb-1"><strong>拉黑原因:</strong> {{ blacklist_record.reason }}</p>
+                                <p class="mb-1"><strong>开始时间:</strong> {{ blacklist_record.start_time|date:"Y-m-d H:i" }}</p>
+                                {% if blacklist_record.end_time %}
+                                    <p class="mb-0"><strong>结束时间:</strong> {{ blacklist_record.end_time|date:"Y-m-d H:i" }}</p>
+                                {% else %}
+                                    <p class="mb-0"><strong>结束时间:</strong> 无限制</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <!-- 不在黑名单中 -->
+                    <div class="alert alert-success">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle fa-2x me-3"></i>
+                            <div>
+                                <h5 class="alert-heading">您的账户状态正常</h5>
+                                <p class="mb-0">您当前不在黑名单中，可以正常使用自习室预约系统的所有功能。</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if blacklist_record %}
+            <!-- 撤销申请状态 -->
+            <div class="card status-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file-alt me-2"></i>撤销申请状态
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if removal_request %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>申请时间:</strong> {{ removal_request.created_at|date:"Y-m-d H:i" }}</p>
+                                <p><strong>申诉理由:</strong> {{ removal_request.appeal_reason }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                {% if removal_request.status == 'pending' %}
+                                    <span class="badge bg-warning fs-6">待审核</span>
+                                    <p class="text-muted mt-2">您的申请已提交，正在等待管理员审核。</p>
+                                {% elif removal_request.status == 'approved' %}
+                                    <span class="badge bg-success fs-6">已批准</span>
+                                    <p class="text-muted mt-2">
+                                        <strong>审核时间:</strong> {{ removal_request.reviewed_at|date:"Y-m-d H:i" }}<br>
+                                        {% if removal_request.admin_comment %}
+                                            <strong>管理员备注:</strong> {{ removal_request.admin_comment }}
+                                        {% endif %}
+                                    </p>
+                                {% elif removal_request.status == 'rejected' %}
+                                    <span class="badge bg-danger fs-6">已拒绝</span>
+                                    <p class="text-muted mt-2">
+                                        <strong>审核时间:</strong> {{ removal_request.reviewed_at|date:"Y-m-d H:i" }}<br>
+                                        {% if removal_request.admin_comment %}
+                                            <strong>拒绝原因:</strong> {{ removal_request.admin_comment }}
+                                        {% endif %}
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">您尚未提交撤销申请。</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 撤销申请表单 -->
+            {% if not removal_request or removal_request.status == 'rejected' %}
+                <div class="card appeal-form mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-edit me-2"></i>提交撤销申请
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="appeal_reason" class="form-label">申诉理由</label>
+                                <textarea class="form-control" id="appeal_reason" name="appeal_reason" 
+                                          rows="5" placeholder="请详细说明您认为应该撤销黑名单的理由..." required></textarea>
+                                <div class="form-text">
+                                    请详细描述您的情况，管理员会根据您的申诉内容进行审核。
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>提交申请
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+        {% endif %}
+
+        <!-- 历史黑名单记录 -->
+        {% if historical_blacklist_records or historical_removal_requests %}
+        <div class="card status-card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>历史记录 - 应以为戒
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if historical_blacklist_records %}
+                <div class="mb-4">
+                    <h6 class="text-muted mb-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>历史黑名单记录
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>拉黑原因</th>
+                                    <th>开始时间</th>
+                                    <th>结束时间</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in historical_blacklist_records %}
+                                <tr>
+                                    <td>{{ record.reason }}</td>
+                                    <td>{{ record.start_time|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        {% if record.end_time %}
+                                            {{ record.end_time|date:"Y-m-d H:i" }}
+                                        {% else %}
+                                            无限制
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">已解除</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if historical_removal_requests %}
+                <div>
+                    <h6 class="text-muted mb-3">
+                        <i class="fas fa-file-alt me-2"></i>历史撤销申请记录
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>申请时间</th>
+                                    <th>申诉理由</th>
+                                    <th>处理结果</th>
+                                    <th>处理时间</th>
+                                    <th>管理员备注</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in historical_removal_requests %}
+                                <tr>
+                                    <td>{{ request.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                data-bs-toggle="modal" data-bs-target="#historicalReasonModal{{ request.id }}">
+                                            查看详情
+                                        </button>
+                                    </td>
+                                    <td>
+                                        {% if request.status == 'approved' %}
+                                            <span class="badge bg-success">已批准</span>
+                                        {% elif request.status == 'rejected' %}
+                                            <span class="badge bg-danger">已拒绝</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if request.reviewed_at %}
+                                            {{ request.reviewed_at|date:"Y-m-d H:i" }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if request.admin_comment %}
+                                            {{ request.admin_comment|truncatechars:30 }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+
+                                <!-- 历史申诉理由模态框 -->
+                                <div class="modal fade" id="historicalReasonModal{{ request.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">历史申诉理由详情</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p><strong>申请时间:</strong> {{ request.created_at|date:"Y-m-d H:i" }}</p>
+                                                <p><strong>申诉理由:</strong></p>
+                                                <div class="border rounded p-3 bg-light">
+                                                    {{ request.appeal_reason }}
+                                                </div>
+                                                {% if request.admin_comment %}
+                                                <p class="mt-3"><strong>管理员备注:</strong></p>
+                                                <div class="border rounded p-3 bg-light">
+                                                    {{ request.admin_comment }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if not historical_blacklist_records and not historical_removal_requests %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-check-circle fa-3x mb-3"></i>
+                    <p class="mb-0">暂无历史记录，请继续保持良好的使用习惯</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 使用说明 -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>使用说明
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success me-2"></i> 查看您的黑名单状态</li>
+                    <li><i class="fas fa-check text-success me-2"></i> 如果处于黑名单中，可以提交撤销申请</li>
+                    <li><i class="fas fa-check text-success me-2"></i> 跟踪申请审核进度</li>
+                    <li><i class="fas fa-check text-success me-2"></i> 查看历史记录，应以为戒</li>
+                    <li><i class="fas fa-check text-success me-2"></i> 管理员会在3个工作日内处理您的申请</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/bootstrap/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="writingsuggestions" content="none">
+    <title>数据分析中心 - 自习室预约系统</title>
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <script src="/static/js/chart.min.js"></script>
+    <style>
+        .dashboard-card {
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+        .refresh-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+        .suggestion-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .export-btn-group {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/login/admin/">
+                <i class="fas fa-chart-line me-2"></i>
+                自习室预约系统 - 数据分析中心
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/login/admin/">
+                    <i class="fas fa-home me-1"></i>管理首页
+                </a>
+                <a class="nav-link active" href="{% url 'admin_data_analysis' %}">
+                    <i class="fas fa-chart-bar me-1"></i>数据分析
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- 数据刷新指示器 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        <span id="refreshStatus">数据每10秒自动刷新</span>
+                        <span id="lastUpdate" class="text-muted ms-3"></span>
+                        
+                        <!-- 日期选择器 -->
+                        <div class="ms-4">
+                            <label class="form-label me-2 mb-0">数据范围:</label>
+                            <select class="form-select form-select-sm d-inline-block" id="dateRange" style="width: auto;" onchange="changeDateRange()">
+                                <option value="today">今日</option>
+                                <option value="week">近7天</option>
+                                <option value="month">近30天</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="export-btn-group">
+                        <button class="btn btn-success btn-sm me-2" onclick="exportExcel()">
+                            <i class="fas fa-file-excel me-1"></i>导出Excel
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="exportPDF()">
+                            <i class="fas fa-file-pdf me-1"></i>导出PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 关键指标卡片 -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <h6>今日预约量</h6>
+                    <h3 id="todayBookings">0</h3>
+                    <small>较昨日: <span id="bookingChange">0%</span></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <h6>当前使用率</h6>
+                    <h3 id="currentUsage">0%</h3>
+                    <small>高峰时段: <span id="peakTime">18:00-21:00</span></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                    <h6>用户满意度</h6>
+                    <h3 id="satisfactionRate">0%</h3>
+                    <small>评价数量: <span id="evaluationCount">0</span></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                    <h6>违规次数</h6>
+                    <h3 id="violationCount">0</h3>
+                    <small>本周变化: <span id="violationChange">0%</span></small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图表区域 -->
+        <div class="row">
+            <!-- 柱状图：每日各时段自习室使用率 -->
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>每日各时段自习室使用率
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="usageByTimeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 折线图：每周预约量/违规次数变化趋势 -->
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-line me-2"></i>每周预约量/违规次数变化趋势
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="weeklyTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计表格：按自习室、座位类型统计使用率 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card dashboard-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-table me-2"></i>自习室使用率统计
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="roomUsageTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>自习室</th>
+                                        <th>座位总数</th>
+                                        <th>当前使用</th>
+                                        <th>使用率</th>
+                                        <th>今日预约</th>
+                                        <th>平均评分</th>
+                                        <th>状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="roomUsageBody">
+                                    <!-- 数据将通过JavaScript动态加载 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 决策建议 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card dashboard-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>系统决策建议
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="suggestionsContainer">
+                            <!-- 建议将通过JavaScript动态生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <!-- 导出功能依赖库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- 中文字体支持 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        // 全局变量
+        let usageByTimeChart = null;
+        let weeklyTrendChart = null;
+        let refreshInterval = null;
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            startAutoRefresh();
+            updateLastUpdateTime();
+        });
+
+        // 加载数据
+        async function loadData() {
+            try {
+                // 获取选择的日期范围
+                const dateRange = document.getElementById('dateRange').value;
+                
+                // 调用真实的API端点，包含日期参数
+                const response = await fetch(`/login/admin/data_analysis/api/?date=${dateRange}`);
+                const data = await response.json();
+                
+                // 更新分析信息
+                if (data.analysisInfo) {
+                    document.getElementById('refreshStatus').textContent = 
+                        `数据分析 - ${data.analysisInfo.date} (共${data.analysisInfo.totalRooms}个自习室，${data.analysisInfo.totalSeats}个座位)`;
+                }
+                
+                updateStatistics(data.statistics);
+                createUsageByTimeChart(data.usageByTime);
+                createWeeklyTrendChart(data.weeklyTrend);
+                updateRoomUsageTable(data.roomUsage);
+                generateSuggestions(data.suggestions);
+                
+            } catch (error) {
+                console.error('数据加载失败:', error);
+                showError('数据加载失败，请检查网络连接');
+            }
+        }
+        
+        // 切换日期范围
+        function changeDateRange() {
+            loadData(); // 重新加载数据
+        }
+
+        // 更新统计指标
+        function updateStatistics(stats) {
+            document.getElementById('todayBookings').textContent = stats.todayBookings;
+            document.getElementById('bookingChange').textContent = stats.bookingChange + '%';
+            document.getElementById('currentUsage').textContent = stats.currentUsage + '%';
+            document.getElementById('peakTime').textContent = stats.peakTime;
+            document.getElementById('satisfactionRate').textContent = stats.satisfactionRate + '%';
+            document.getElementById('evaluationCount').textContent = stats.evaluationCount;
+            document.getElementById('violationCount').textContent = stats.violationCount;
+            document.getElementById('violationChange').textContent = stats.violationChange + '%';
+        }
+
+        // 创建使用率柱状图
+        function createUsageByTimeChart(data) {
+            const ctx = document.getElementById('usageByTimeChart').getContext('2d');
+            
+            if (usageByTimeChart) {
+                usageByTimeChart.destroy();
+            }
+            
+            usageByTimeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: '使用率 (%)',
+                        data: data.values,
+                        backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: '使用率 (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 创建周趋势折线图
+        function createWeeklyTrendChart(data) {
+            const ctx = document.getElementById('weeklyTrendChart').getContext('2d');
+            
+            if (weeklyTrendChart) {
+                weeklyTrendChart.destroy();
+            }
+            
+            weeklyTrendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        {
+                            label: '预约量',
+                            data: data.bookings,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.3
+                        },
+                        {
+                            label: '违规次数',
+                            data: data.violations,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // 更新自习室使用率表格
+        function updateRoomUsageTable(data) {
+            const tbody = document.getElementById('roomUsageBody');
+            tbody.innerHTML = '';
+            
+            data.forEach(room => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${room.name}</strong></td>
+                    <td>${room.totalSeats}</td>
+                    <td>${room.currentUsage}</td>
+                    <td>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar ${getUsageColor(room.usageRate)}" 
+                                 style="width: ${room.usageRate}%">
+                                ${room.usageRate}%
+                            </div>
+                        </div>
+                    </td>
+                    <td>${room.todayBookings}</td>
+                    <td>${room.averageRating}</td>
+                    <td>
+                        <span class="badge ${getStatusBadge(room.usageRate)}">
+                            ${getStatusText(room.usageRate)}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 生成决策建议
+        function generateSuggestions(suggestions) {
+            const container = document.getElementById('suggestionsContainer');
+            container.innerHTML = '';
+            
+            suggestions.forEach((suggestion, index) => {
+                const card = document.createElement('div');
+                card.className = 'suggestion-card';
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">建议 ${index + 1}</h6>
+                            <p class="mb-0">${suggestion.text}</p>
+                        </div>
+                        <span class="badge bg-light text-dark">${suggestion.priority}</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // 工具函数
+        function getUsageColor(usageRate) {
+            if (usageRate >= 80) return 'bg-danger';
+            if (usageRate >= 60) return 'bg-warning';
+            return 'bg-success';
+        }
+
+        function getStatusBadge(usageRate) {
+            if (usageRate >= 80) return 'bg-danger';
+            if (usageRate >= 60) return 'bg-warning';
+            return 'bg-success';
+        }
+
+        function getStatusText(usageRate) {
+            if (usageRate >= 80) return '高负荷';
+            if (usageRate >= 60) return '中等';
+            return '正常';
+        }
+
+        function showError(message) {
+            // 简单的错误提示实现
+            alert(message);
+        }
+
+        // 自动刷新功能
+        function startAutoRefresh() {
+            refreshInterval = setInterval(() => {
+                loadData();
+                updateLastUpdateTime();
+            }, 10000); // 每10秒刷新一次
+        }
+
+        function updateLastUpdateTime() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = 
+                `最后更新: ${now.toLocaleTimeString()}`;
+        }
+
+        // 导出功能
+        function exportExcel() {
+            try {
+                // 创建工作簿
+                const wb = XLSX.utils.book_new();
+                
+                // 导出统计数据
+                const statsData = [
+                    ['统计指标', '数值', '备注'],
+                    ['今日预约量', document.getElementById('todayBookings').textContent, '较昨日: ' + document.getElementById('bookingChange').textContent],
+                    ['当前使用率', document.getElementById('currentUsage').textContent, '高峰时段: ' + document.getElementById('peakTime').textContent],
+                    ['用户满意度', document.getElementById('satisfactionRate').textContent, '评价数量: ' + document.getElementById('evaluationCount').textContent],
+                    ['违规次数', document.getElementById('violationCount').textContent, '本周变化: ' + document.getElementById('violationChange').textContent]
+                ];
+                const statsSheet = XLSX.utils.aoa_to_sheet(statsData);
+                XLSX.utils.book_append_sheet(wb, statsSheet, '关键指标');
+                
+                // 导出自习室使用率表格
+                const table = document.getElementById('roomUsageTable');
+                const tableData = [];
+                
+                // 表头
+                const headers = [];
+                table.querySelectorAll('thead th').forEach(th => {
+                    headers.push(th.textContent.trim());
+                });
+                tableData.push(headers);
+                
+                // 表格数据
+                table.querySelectorAll('tbody tr').forEach(tr => {
+                    const row = [];
+                    tr.querySelectorAll('td').forEach(td => {
+                        // 处理进度条和徽章
+                        if (td.querySelector('.progress-bar')) {
+                            const progressBar = td.querySelector('.progress-bar');
+                            row.push(progressBar.textContent.trim());
+                        } else if (td.querySelector('.badge')) {
+                            const badge = td.querySelector('.badge');
+                            row.push(badge.textContent.trim());
+                        } else {
+                            row.push(td.textContent.trim());
+                        }
+                    });
+                    tableData.push(row);
+                });
+                
+                const tableSheet = XLSX.utils.aoa_to_sheet(tableData);
+                XLSX.utils.book_append_sheet(wb, tableSheet, '自习室使用率');
+                
+                // 导出图表数据（模拟数据）
+                const chartData = [
+                    ['图表类型', '数据项', '数值'],
+                    ['使用率柱状图', '时间段', '使用率(%)']
+                ];
+                
+                if (usageByTimeChart && usageByTimeChart.data) {
+                    usageByTimeChart.data.labels.forEach((label, index) => {
+                        chartData.push(['使用率柱状图', label, usageByTimeChart.data.datasets[0].data[index] || 0]);
+                    });
+                }
+                
+                const chartSheet = XLSX.utils.aoa_to_sheet(chartData);
+                XLSX.utils.book_append_sheet(wb, chartSheet, '图表数据');
+                
+                // 生成文件名
+                const now = new Date();
+                const fileName = `自习室数据分析_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}.xlsx`;
+                
+                // 下载文件
+                XLSX.writeFile(wb, fileName);
+                
+                showSuccess('Excel文件导出成功！');
+                
+            } catch (error) {
+                console.error('Excel导出失败:', error);
+                showError('Excel导出失败，请重试');
+            }
+        }
+
+        async function exportPDF() {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                
+                // 设置字体为英文兼容字体
+                doc.setFont('helvetica', 'normal');
+                
+                // 设置标题（使用英文避免中文显示问题）
+                doc.setFontSize(20);
+                doc.setTextColor(40, 40, 40);
+                doc.text('Study Room Data Analysis Report', 105, 20, { align: 'center' });
+                
+                // 添加时间戳
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                const now = new Date();
+                doc.text(`Generated: ${now.toLocaleString('en-US')}`, 105, 30, { align: 'center' });
+                
+                let yPosition = 50;
+                
+                // 添加关键指标（使用英文）
+                doc.setFontSize(16);
+                doc.setTextColor(40, 40, 40);
+                doc.text('Key Metrics', 20, yPosition);
+                yPosition += 10;
+                
+                doc.setFontSize(10);
+                const stats = [
+                    `Today Bookings: ${document.getElementById('todayBookings').textContent} (Change: ${document.getElementById('bookingChange').textContent})`,
+                    `Current Usage: ${document.getElementById('currentUsage').textContent} (Peak: ${document.getElementById('peakTime').textContent})`,
+                    `Satisfaction: ${document.getElementById('satisfactionRate').textContent} (Reviews: ${document.getElementById('evaluationCount').textContent})`,
+                    `Violations: ${document.getElementById('violationCount').textContent} (Weekly Change: ${document.getElementById('violationChange').textContent})`
+                ];
+                
+                stats.forEach(stat => {
+                    if (yPosition > 270) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    doc.text(stat, 25, yPosition);
+                    yPosition += 7;
+                });
+                
+                yPosition += 10;
+                
+                // 添加图表截图
+                if (yPosition > 200) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                
+                doc.setFontSize(16);
+                doc.text('Chart Analysis', 20, yPosition);
+                yPosition += 10;
+                
+                // 截取图表并添加到PDF
+                const charts = ['usageByTimeChart', 'weeklyTrendChart'];
+                
+                for (const chartId of charts) {
+                    const chartElement = document.getElementById(chartId);
+                    if (chartElement) {
+                        try {
+                            const canvas = await html2canvas(chartElement, {
+                                scale: 2,
+                                useCORS: true,
+                                allowTaint: true
+                            });
+                            
+                            const imgData = canvas.toDataURL('image/png');
+                            
+                            // 检查是否需要新页面
+                            if (yPosition > 150) {
+                                doc.addPage();
+                                yPosition = 20;
+                            }
+                            
+                            // 添加图表标题（使用英文）
+                            doc.setFontSize(12);
+                            doc.text(chartId === 'usageByTimeChart' ? 'Daily Usage Rate by Time' : 'Weekly Booking & Violation Trend', 20, yPosition);
+                            yPosition += 5;
+                            
+                            // 添加图片
+                            const imgWidth = 170;
+                            const imgHeight = canvas.height * imgWidth / canvas.width;
+                            doc.addImage(imgData, 'PNG', 20, yPosition, imgWidth, imgHeight);
+                            yPosition += imgHeight + 15;
+                            
+                        } catch (error) {
+                            console.warn(`Cannot capture chart ${chartId}:`, error);
+                        }
+                    }
+                }
+                
+                // 添加表格数据
+                if (yPosition > 200) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                
+                doc.setFontSize(16);
+                doc.text('Room Usage Statistics', 20, yPosition);
+                yPosition += 10;
+                
+                const table = document.getElementById('roomUsageTable');
+                if (table) {
+                    // 使用简单的文本方式显示表格数据
+                    doc.setFontSize(10);
+                    
+                    // 获取表格数据
+                    const headers = [];
+                    table.querySelectorAll('thead th').forEach(th => {
+                        headers.push(th.textContent.trim());
+                    });
+                    
+                    // 显示表头
+                    doc.text('Room Usage Summary:', 25, yPosition);
+                    yPosition += 7;
+                    
+                    // 显示每行数据
+                    table.querySelectorAll('tbody tr').forEach((tr, rowIndex) => {
+                        if (yPosition > 270) {
+                            doc.addPage();
+                            yPosition = 20;
+                        }
+                        
+                        const cells = [];
+                        tr.querySelectorAll('td').forEach(td => {
+                            if (td.querySelector('.progress-bar')) {
+                                cells.push(td.querySelector('.progress-bar').textContent.trim());
+                            } else if (td.querySelector('.badge')) {
+                                cells.push(td.querySelector('.badge').textContent.trim());
+                            } else {
+                                cells.push(td.textContent.trim());
+                            }
+                        });
+                        
+                        // 显示每行数据
+                        const roomInfo = `Room ${rowIndex + 1}: ${cells[0]} - Usage: ${cells[3]}, Bookings: ${cells[4]}, Rating: ${cells[5]}`;
+                        doc.text(roomInfo, 30, yPosition);
+                        yPosition += 7;
+                    });
+                }
+                
+                // 生成文件名（使用英文）
+                const fileName = `study_room_analysis_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}.pdf`;
+                doc.save(fileName);
+                
+                showSuccess('PDF file exported successfully!');
+                
+            } catch (error) {
+                console.error('PDF export failed:', error);
+                showError('PDF export failed, please try again');
+            }
+        }
+        
+        // 显示成功消息
+        function showSuccess(message) {
+            // 创建成功提示
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                <i class="fas fa-check-circle me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            // 3秒后自动消失
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 3000);
+        }
+
+        // 清理资源
+        window.addEventListener('beforeunload', function() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

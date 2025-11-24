@@ -1,0 +1,241 @@
+{% extends "admin/index.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+/* 自定义快捷操作样式 */
+.quick-actions {
+    margin: 0 0 20px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 10px;
+    border-left: 5px solid #0d6efd;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.quick-actions h4 {
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.quick-actions-links {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.quick-action-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+    min-width: 160px;
+}
+
+.quick-action-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.quick-action-link.primary {
+    background: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+}
+
+.quick-action-link.info {
+    background: #0dcaf0;
+    color: white;
+    border-color: #0dcaf0;
+}
+
+.quick-action-link.warning {
+    background: #ffc107;
+    color: #000;
+    border-color: #ffc107;
+}
+
+.quick-action-link.success {
+    background: #198754;
+    color: white;
+    border-color: #198754;
+}
+
+.badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.2);
+    margin-left: 5px;
+}
+
+.card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <!-- 自定义快捷操作模块 -->
+    <div class="quick-actions">
+        <h4><i class="fas fa-rocket"></i> 快捷操作</h4>
+        <div class="quick-actions-links">
+            <a href="{% url 'admin_user_management' %}" class="quick-action-link primary">
+                <i class="fas fa-users"></i>
+                用户管理
+                <span class="badge">实时</span>
+            </a>
+            <a href="{% url 'admin_evaluation_management' %}" class="quick-action-link info">
+                <i class="fas fa-star"></i>
+                评价管理
+                <span class="badge">处理</span>
+            </a>
+            <a href="{% url 'admin_complaint_management' %}" class="quick-action-link warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                投诉管理
+                <span class="badge">查看</span>
+            </a>
+            <a href="{% url 'admin_complaint_feedback' %}" class="quick-action-link" style="background: #6f42c1; color: white;">
+                <i class="fas fa-exclamation-circle"></i>
+                投诉反馈
+                <span class="badge">管理</span>
+            </a>
+            <a href="{% url 'admin_blacklist_management' %}" class="quick-action-link success">
+                <i class="fas fa-ban"></i>
+                黑名单管理
+                <span class="badge">管理</span>
+            </a>
+            <a href="/index/bookings/" class="quick-action-link" style="background: #6f42c1; color: white;">
+                <i class="fas fa-calendar-alt"></i>
+                座位预约
+            </a>
+            <a href="/index/recording/" class="quick-action-link" style="background: #20c997; color: white;">
+                <i class="fas fa-history"></i>
+                预约记录
+            </a>
+            <a href="{% url 'admin_data_analysis' %}" class="quick-action-link" style="background: #17a2b8; color: white;">
+                <i class="fas fa-chart-bar"></i>
+                数据分析
+                <span class="badge">统计</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 原有的应用列表 -->
+    {% if app_list %}
+        {% for app in app_list %}
+            <div class="app-{{ app.app_label }} module">
+                <table>
+                    <caption>
+                        <a href="{{ app.app_url }}" class="section" title="{% blocktrans with name=app.name %}Models in the {{ name }} application{% endblocktrans %}">
+                            {{ app.name }}
+                        </a>
+                    </caption>
+                    {% for model in app.models %}
+                        <tr class="model-{{ model.object_name|lower }}">
+                            {% if model.admin_url %}
+                                <th scope="row"><a href="{{ model.admin_url }}">{{ model.name }}</a></th>
+                            {% else %}
+                                <th scope="row">{{ model.name }}</th>
+                            {% endif %}
+
+                            {% if model.add_url %}
+                                <td><a href="{{ model.add_url }}" class="addlink">{% trans 'Add' %}</a></td>
+                            {% else %}
+                                <td>&nbsp;</td>
+                            {% endif %}
+
+                            {% if model.admin_url %}
+                                <td><a href="{{ model.admin_url }}" class="changelink">{% trans 'Change' %}</a></td>
+                            {% else %}
+                                <td>&nbsp;</td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>{% trans 'You don’t have permission to view or edit anything.' %}</p>
+    {% endif %}
+</div>
+
+<!-- 添加统计信息卡片 -->
+<div style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+    <div class="card" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); color: white; padding: 15px; border-radius: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-users" style="font-size: 24px;"></i>
+            <div>
+                <h4 style="margin: 0; font-size: 18px;">用户总数</h4>
+                <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold;">--</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card" style="background: linear-gradient(135deg, #198754 0%, #146c43 100%); color: white; padding: 15px; border-radius: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-star" style="font-size: 24px;"></i>
+            <div>
+                <h4 style="margin: 0; font-size: 18px;">今日评价</h4>
+                <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold;">--</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card" style="background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: #000; padding: 15px; border-radius: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-exclamation-circle" style="font-size: 24px;"></i>
+            <div>
+                <h4 style="margin: 0; font-size: 18px;">待处理投诉</h4>
+                <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold;">--</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 15px; border-radius: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-ban" style="font-size: 24px;"></i>
+            <div>
+                <h4 style="margin: 0; font-size: 18px;">黑名单用户</h4>
+                <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold;">--</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 添加一些交互效果
+document.addEventListener('DOMContentLoaded', function() {
+    // 为快捷操作链接添加点击效果
+    const actionLinks = document.querySelectorAll('.quick-action-link');
+    actionLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            // 添加点击反馈
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 150);
+        });
+    });
+    
+    // 为统计卡片添加点击跳转 - 移除有问题的JavaScript代码
+    // 统计卡片点击功能暂时禁用，避免模板语法错误
+});
+</script>
+{% endblock %}

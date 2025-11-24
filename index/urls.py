@@ -19,4 +19,15 @@ urlpatterns = [
     path('change_avatar/', views.change_avatar, name='change_avatar'),
     path('api/music/', MusicListView.as_view(), name='music_list'),
     path('api/music/<int:music_id>/', MusicDetailView.as_view(), name='music_detail'),
+    
+    # 用户管理功能
+    path('user_management/', views.user_management, name='user_management'),
+    path('complaint_management/', views.complaint_management, name='complaint_management'),
+    path('complaint_feedback/<int:complaint_id>/', views.complaint_feedback_view, name='complaint_feedback_view'),
+    path('submit_complaint/', views.submit_complaint, name='submit_complaint'),
+    path('blacklist_management/', views.blacklist_management, name='blacklist_management'),
+    
+    # 违约记录功能
+    path('api/violation_count/', views.get_user_violation_count, name='get_user_violation_count'),
+    path('admin/manual_check_violations/', views.manual_check_violations, name='manual_check_violations'),
 ]

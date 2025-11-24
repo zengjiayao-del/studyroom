@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投诉管理 - 自习室预约系统</title>
+    <!-- 使用更稳定的CDN源 -->
+    <link href="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        .nav-link {
+            color: #495057;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <div class="col-md-3 col-lg-2 sidebar">
+                <div class="d-flex flex-column flex-shrink-0 p-3">
+                    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
+                        <span class="fs-4">个人中心</span>
+                    </a>
+                    <hr>
+                    <ul class="nav nav-pills flex-column mb-auto">
+                        <li class="nav-item">
+                            <a href="{% url 'user_dashboard' %}" class="nav-link">
+                                <i class="fas fa-home me-2"></i>
+                                首页
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'user_profile' %}" class="nav-link">
+                                <i class="fas fa-user me-2"></i>
+                                个人信息
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'user_evaluations' %}" class="nav-link">
+                                <i class="fas fa-star me-2"></i>
+                                评价管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'user_complaints' %}" class="nav-link active">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                投诉管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/index/" class="nav-link">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                返回首页
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 主内容区 -->
+            <div class="col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">投诉管理</h1>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addComplaintModal">
+                        <i class="fas fa-plus me-2"></i>提交投诉
+                    </button>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- 投诉列表 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">我的投诉记录</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if complaints %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>投诉标题</th>
+                                            <th>投诉类型</th>
+                                            <th>状态</th>
+                                            <th>投诉时间</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for complaint in complaints %}
+                                        <tr>
+                                            <td>{{ complaint.title }}</td>
+                                            <td>
+                                                <span class="badge bg-info">
+                                                    {{ complaint.get_complaint_type_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{% if complaint.status == 'pending' %}secondary{% elif complaint.status == 'processing' %}warning{% elif complaint.status == 'resolved' %}success{% else %}dark{% endif %}">
+                                                    {{ complaint.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td>{{ complaint.time|date:"Y-m-d H:i" }}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#viewComplaintModal{{ complaint.id }}">
+                                                    查看详情
+                                                </button>
+                                                <a href="{% url 'complaint_feedback' complaint.id %}" class="btn btn-sm btn-outline-primary">
+                                                    查看反馈
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- 查看投诉详情模态框 -->
+                                        <div class="modal fade" id="viewComplaintModal{{ complaint.id }}" tabindex="-1">
+                                            <div class="modal-dialog modal-lg">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">投诉详情</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="row mb-3">
+                                                            <div class="col-md-6">
+                                                                <strong>投诉标题:</strong> {{ complaint.title }}
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <strong>投诉类型:</strong> 
+                                                                <span class="badge bg-info">{{ complaint.get_complaint_type_display }}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row mb-3">
+                                                            <div class="col-md-6">
+                                                                <strong>状态:</strong> 
+                                                                <span class="badge bg-{% if complaint.status == 'pending' %}secondary{% elif complaint.status == 'processing' %}warning{% elif complaint.status == 'resolved' %}success{% else %}dark{% endif %}">
+                                                                    {{ complaint.get_status_display }}
+                                                                </span>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <strong>投诉时间:</strong> {{ complaint.time|date:"Y-m-d H:i" }}
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <strong>投诉内容:</strong>
+                                                            <div class="border rounded p-3 mt-2">
+                                                                {{ complaint.content|linebreaks }}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">暂无投诉记录</p>
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addComplaintModal">
+                                    提交第一条投诉
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提交投诉模态框 -->
+    <div class="modal fade" id="addComplaintModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title">提交投诉</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="complaint_type" class="form-label">投诉类型</label>
+                                <select class="form-select" id="complaint_type" name="complaint_type" required>
+                                    <option value="">请选择投诉类型</option>
+                                    <option value="facility">设施问题</option>
+                                    <option value="service">服务问题</option>
+                                    <option value="environment">环境问题</option>
+                                    <option value="other">其他问题</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="title" class="form-label">投诉标题</label>
+                                <input type="text" class="form-control" id="title" name="title" placeholder="请输入投诉标题" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="content" class="form-label">投诉内容</label>
+                            <textarea class="form-control" id="content" name="content" rows="6" placeholder="请详细描述您遇到的问题..." required></textarea>
+                            <div class="form-text">请尽可能详细地描述问题，包括时间、地点、具体情况等</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary">提交投诉</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

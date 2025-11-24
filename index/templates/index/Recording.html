@@ -46,9 +46,9 @@
 
                             {% if i.time.day >= day and i.is_active == 1 and  month <= i.time.month %}
                                 <a href="{% url 'sign_url' %}" class="btn btn-outline-success">验证码签到</a>
-                                                                <a id="saoma" href="http://sao315.com/w/api/saoyisao?redirect_uri=当前页面url"
-                                                                   class="btn btn-outline-success" role="button" aria-pressed="true"><i
-                                                                        class=""></i>扫码签到</a>
+                                                                <a href="{% url 'sign_url' %}" class="btn btn-outline-info">
+                                                                    <i class="fas fa-qrcode"></i> 扫码签到
+                                                                </a>
                                 <a type="button" class="btn btn-outline-success" data-bs-toggle="modal"
                                    data-bs-target="#exampleModal-{{ i.id }}">取消预约</a>
                                 <div class="modal fade" id="exampleModal-{{ i.id }}" tabindex="-1"

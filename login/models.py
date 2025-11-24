@@ -14,6 +14,21 @@ class Students(models.Model):
     last_login = models.DateTimeField(verbose_name="上次登录", null=True, blank=True)
     # integral = models.IntegerField(verbose_name="积分", default=100)
     is_active = models.BooleanField(verbose_name="活跃状态", default=True)
+    
+    # 新增字段：常用自习室偏好
+    preferred_room = models.ForeignKey(verbose_name="常用自习室", to='Rooms', on_delete=models.SET_NULL, 
+                                       null=True, blank=True)
+    
+    # 新增字段：个人简介
+    bio = models.TextField(verbose_name="个人简介", max_length=500, default='', blank=True)
+    
+    # 新增字段：学习偏好
+    study_preference = models.CharField(verbose_name="学习偏好", max_length=50, choices=[
+        ('quiet', '安静学习'),
+        ('group', '小组讨论'),
+        ('flexible', '灵活适应'),
+        ('other', '其他')
+    ], default='quiet', blank=True)
 
     def admin_sample(self):
         return mark_safe('<img src="/media/%s" height="60" width="60" />' % (self.photo,))
@@ -128,24 +143,6 @@ class Integrals(models.Model):
     admin_sample.allow_tags = True
 
 
-# 提示管理
-class Text(models.Model):
-    id = models.AutoField(verbose_name="编号", primary_key=True)
-    title = models.CharField(verbose_name="题目", max_length=120, default='')
-    text = models.TextField(verbose_name="内容", default='')
-    time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
-    is_active = models.BooleanField(verbose_name="活跃状态", default=True)
-
-    def __str__(self):
-        return self.text
-
-    class Meta:
-        # 数据库列表名
-        db_table = 'Text'
-        # 后台管理名
-        verbose_name_plural = '提示管理'
-
-
 # 签到码
 class SignCode(models.Model):
     id = models.AutoField(verbose_name="编号", primary_key=True)
@@ -165,3 +162,110 @@ class SignCode(models.Model):
 
 def __str__(self):
     return self.admin_sample
+
+
+# 用户评价管理
+class UserEvaluation(models.Model):
+    id = models.AutoField(verbose_name="编号", primary_key=True)
+    student = models.ForeignKey(verbose_name="学生", to='Students', on_delete=models.CASCADE)
+    room = models.ForeignKey(verbose_name="自习室", to='Rooms', on_delete=models.CASCADE)
+    rating = models.IntegerField(verbose_name="评分", choices=[(1, '1星'), (2, '2星'), (3, '3星'), (4, '4星'), (5, '5星')], default=5)
+    comment = models.TextField(verbose_name="评价内容", default='')
+    time = models.DateTimeField(verbose_name="评价时间", auto_now_add=True)
+    is_active = models.BooleanField(verbose_name="活跃状态", default=True)
+    is_approved = models.BooleanField(verbose_name="审核状态", default=False)
+
+    def __str__(self):
+        return f"{self.student.name} - {self.room.name}"
+
+    class Meta:
+        db_table = 'user_evaluation'
+        verbose_name_plural = '用户评价管理'
+
+
+# 用户投诉管理
+class UserComplaint(models.Model):
+    id = models.AutoField(verbose_name="编号", primary_key=True)
+    student = models.ForeignKey(verbose_name="投诉学生", to='Students', on_delete=models.CASCADE)
+    complaint_type = models.CharField(verbose_name="投诉类型", max_length=50, choices=[
+        ('facility', '设施问题'),
+        ('service', '服务问题'),
+        ('environment', '环境问题'),
+        ('other', '其他问题')
+    ], default='other')
+    title = models.CharField(verbose_name="投诉标题", max_length=100, default='')
+    content = models.TextField(verbose_name="投诉内容", default='')
+    time = models.DateTimeField(verbose_name="投诉时间", auto_now_add=True)
+    status = models.CharField(verbose_name="处理状态", max_length=20, choices=[
+        ('pending', '待处理'),
+        ('processing', '处理中'),
+        ('resolved', '已解决'),
+        ('closed', '已关闭')
+    ], default='pending')
+    is_active = models.BooleanField(verbose_name="活跃状态", default=True)
+
+    def __str__(self):
+        return f"{self.student.name} - {self.title}"
+
+    class Meta:
+        db_table = 'user_complaint'
+        verbose_name_plural = '用户投诉管理'
+
+
+# 投诉反馈信息
+class ComplaintFeedback(models.Model):
+    id = models.AutoField(verbose_name="编号", primary_key=True)
+    complaint = models.ForeignKey(verbose_name="投诉记录", to='UserComplaint', on_delete=models.CASCADE)
+    admin_user = models.CharField(verbose_name="处理管理员", max_length=50, default='')
+    feedback_content = models.TextField(verbose_name="反馈内容", default='')
+    feedback_time = models.DateTimeField(verbose_name="反馈时间", auto_now_add=True)
+    is_active = models.BooleanField(verbose_name="活跃状态", default=True)
+
+    def __str__(self):
+        return f"{self.complaint.title} - 反馈"
+
+    class Meta:
+        db_table = 'complaint_feedback'
+        verbose_name_plural = '投诉反馈信息'
+
+
+# 黑名单管理
+class Blacklist(models.Model):
+    id = models.AutoField(verbose_name="编号", primary_key=True)
+    student = models.ForeignKey(verbose_name="学生", to='Students', on_delete=models.CASCADE)
+    reason = models.TextField(verbose_name="拉黑原因", default='')
+    start_time = models.DateTimeField(verbose_name="开始时间", auto_now_add=True)
+    end_time = models.DateTimeField(verbose_name="结束时间", null=True, blank=True)
+    is_active = models.BooleanField(verbose_name="活跃状态", default=True)
+
+    def __str__(self):
+        return f"{self.student.name} - 黑名单"
+
+    class Meta:
+        db_table = 'blacklist'
+        verbose_name_plural = '黑名单管理'
+
+
+# 黑名单撤销申请
+class BlacklistRemovalRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', '待审核'),
+        ('approved', '已批准'),
+        ('rejected', '已拒绝'),
+    ]
+    
+    id = models.AutoField(verbose_name="编号", primary_key=True)
+    blacklist = models.ForeignKey(verbose_name="黑名单记录", to='Blacklist', on_delete=models.CASCADE)
+    student = models.ForeignKey(verbose_name="学生", to='Students', on_delete=models.CASCADE)
+    appeal_reason = models.TextField(verbose_name="申诉理由")
+    status = models.CharField(verbose_name="审核状态", max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(verbose_name="申请时间", auto_now_add=True)
+    reviewed_at = models.DateTimeField(verbose_name="审核时间", null=True, blank=True)
+    admin_comment = models.TextField(verbose_name="管理员备注", blank=True)
+
+    def __str__(self):
+        return f"{self.student.name} - 黑名单撤销申请"
+
+    class Meta:
+        db_table = 'blacklist_removal_request'
+        verbose_name_plural = '黑名单撤销申请'
