@@ -22,11 +22,12 @@ from index import views as index_views
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('index/', include('index.urls')),
     path('', include('login.urls')),
+    path('login/', include('login.urls')),
+    path('index/', include('index.urls')),
     path('bookings/', index_views.bookings, name='Bookings'),  # 修正：使用index.views中的bookings视图
     path('api/', include('index.api.urls')),  # 添加API路由
+    path('admin/', admin.site.urls),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)  # 添加媒体文件的URL配置
 if settings.DEBUG:
     urlpatterns += [

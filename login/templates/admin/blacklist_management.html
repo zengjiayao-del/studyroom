@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黑名单管理 - 管理员后台</title>
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        .nav-link {
+            color: #495057;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <div class="col-md-3 col-lg-2 sidebar">
+                <div class="d-flex flex-column flex-shrink-0 p-3">
+                    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
+                        <span class="fs-4">管理员后台</span>
+                    </a>
+                    <hr>
+                    <ul class="nav nav-pills flex-column mb-auto">
+                        <li class="nav-item">
+                            <a href="/admin/" class="nav-link">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                仪表板
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'admin_user_management' %}" class="nav-link">
+                                <i class="fas fa-users me-2"></i>
+                                用户管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'admin_complaint_management' %}" class="nav-link">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                投诉管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'admin_blacklist_management' %}" class="nav-link active">
+                                <i class="fas fa-ban me-2"></i>
+                                黑名单管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'admin_data_analysis' %}" class="nav-link">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                数据分析
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/index/" class="nav-link">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                返回前台
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 主内容区 -->
+            <div class="col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">黑名单管理</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <span class="badge bg-danger">黑名单用户数: {{ blacklist_records.count }}</span>
+                    </div>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- 黑名单列表 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">黑名单用户</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if blacklist_records %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>用户</th>
+                                            <th>拉黑原因</th>
+                                            <th>开始时间</th>
+                                            <th>结束时间</th>
+                                            <th>状态</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for record in blacklist_records %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <img src="/media/{{ record.student.photo }}" class="rounded-circle user-avatar me-2" alt="用户头像">
+                                                    <div>
+                                                        <div>{{ record.student.name }}</div>
+                                                        <small class="text-muted">{{ record.student.phone }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>{{ record.reason|truncatechars:50 }}</td>
+                                            <td>{{ record.start_time|date:"Y-m-d H:i" }}</td>
+                                            <td>
+                                                {% if record.end_time %}
+                                                    {{ record.end_time|date:"Y-m-d H:i" }}
+                                                {% else %}
+                                                    <span class="text-muted">无限制</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{% if record.is_active %}danger{% else %}success{% endif %}">
+                                                    {% if record.is_active %}生效中{% else %}已解除{% endif %}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if record.is_active %}
+                                                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#removeBlacklistModal{{ record.id }}">
+                                                        解除
+                                                    </button>
+                                                {% else %}
+                                                    <span class="text-muted">已解除</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- 解除黑名单模态框 -->
+                                        <div class="modal fade" id="removeBlacklistModal{{ record.id }}" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <form method="post">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="student_id" value="{{ record.student.id }}">
+                                                        <input type="hidden" name="action" value="remove">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title">解除黑名单</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <p>确定要解除用户 <strong>{{ record.student.name }}</strong> 的黑名单限制吗？</p>
+                                                            <p><strong>拉黑原因:</strong> {{ record.reason }}</p>
+                                                            <p><strong>拉黑时间:</strong> {{ record.start_time|date:"Y-m-d H:i" }}</p>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                                            <button type="submit" class="btn btn-success">确认解除</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-ban fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">暂无黑名单记录</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 撤销申请处理 -->
+                {% if removal_requests %}
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">待处理的撤销申请</h5>
+                        <span class="badge bg-warning">待审核: {{ removal_requests|length }}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>申请人</th>
+                                        <th>申请时间</th>
+                                        <th>申诉理由</th>
+                                        <th>原黑名单原因</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for request in removal_requests %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="/media/{{ request.student.photo }}" class="rounded-circle user-avatar me-2" alt="用户头像">
+                                                <div>
+                                                    <div>{{ request.student.name }}</div>
+                                                    <small class="text-muted">{{ request.student.phone }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ request.created_at|date:"Y-m-d H:i" }}</td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                    data-bs-toggle="modal" data-bs-target="#reasonModal{{ request.id }}">
+                                                查看详情
+                                            </button>
+                                        </td>
+                                        <td>{{ request.blacklist.reason|truncatechars:50 }}</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" class="btn btn-success" 
+                                                        data-bs-toggle="modal" data-bs-target="#approveModal{{ request.id }}">
+                                                    批准
+                                                </button>
+                                                <button type="button" class="btn btn-danger" 
+                                                        data-bs-toggle="modal" data-bs-target="#rejectModal{{ request.id }}">
+                                                    拒绝
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <!-- 申诉理由模态框 -->
+                                    <div class="modal fade" id="reasonModal{{ request.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">{{ request.student.name }} 的申诉理由</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p>{{ request.appeal_reason }}</p>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 批准模态框 -->
+                                    <div class="modal fade" id="approveModal{{ request.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <form method="post">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="request_id" value="{{ request.id }}">
+                                                    <input type="hidden" name="removal_action" value="approve">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">批准撤销申请</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p>确定要批准 <strong>{{ request.student.name }}</strong> 的黑名单撤销申请吗？</p>
+                                                        <div class="mb-3">
+                                                            <label for="adminCommentApprove{{ request.id }}" class="form-label">管理员备注（可选）</label>
+                                                            <textarea class="form-control" id="adminCommentApprove{{ request.id }}" 
+                                                                      name="admin_comment" rows="3" placeholder="请输入批准理由..."></textarea>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                                        <button type="submit" class="btn btn-success">确认批准</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 拒绝模态框 -->
+                                    <div class="modal fade" id="rejectModal{{ request.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <form method="post">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="request_id" value="{{ request.id }}">
+                                                    <input type="hidden" name="removal_action" value="reject">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">拒绝撤销申请</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p>确定要拒绝 <strong>{{ request.student.name }}</strong> 的黑名单撤销申请吗？</p>
+                                                        <div class="mb-3">
+                                                            <label for="adminCommentReject{{ request.id }}" class="form-label">拒绝理由</label>
+                                                            <textarea class="form-control" id="adminCommentReject{{ request.id }}" 
+                                                                      name="admin_comment" rows="3" placeholder="请输入拒绝理由..." required></textarea>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                                        <button type="submit" class="btn btn-danger">确认拒绝</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- 添加黑名单表单 -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">添加用户到黑名单</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="student_id" class="form-label">选择用户</label>
+                                    <select class="form-select" id="student_id" name="student_id" required>
+                                        <option value="">请选择用户</option>
+                                        {% for user in users %}
+                                            {% if user.is_active %}
+                                                <option value="{{ user.id }}">{{ user.name }} - {{ user.phone }}</option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="reason" class="form-label">拉黑原因</label>
+                                    <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="请输入拉黑原因..." required></textarea>
+                                </div>
+                            </div>
+                            <input type="hidden" name="action" value="add">
+                            <button type="submit" class="btn btn-danger">添加到黑名单</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/bootstrap/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,35 +1,343 @@
 <!DOCTYPE html>
-<html lang="en">
-{% load static %}
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8"/>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>签到码</title>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/png" sizes="144x144" href="{% static 'img/logo.svg' %}"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="{% static  'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
-    <script src="https://cdn.staticfile.org/qrcodejs/1.0.0/qrcode.min.js"></script>
-</head>
-<body>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>签到码生成</title>
+    <!-- 使用本地静态资源，避免CDN网络问题 -->
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/font-awesome.min.css" rel="stylesheet">
+    <style>
+<main class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white text-center py-4">
+                    <h2 class="mb-0"><i class="fas fa-qrcode me-2"></i>签到码生成</h2>
+                </div>
+                <div class="card-body p-5">
+                    <!-- 签到码显示区域 -->
+                    <div class="text-center mb-5">
+                        <div class="sign-code-display">
+                            <div class="code-container bg-light rounded-3 p-4 mb-3">
+                                <h3 class="text-muted mb-3">当前签到码</h3>
+                                <div class="code-text display-1 fw-bold text-primary mb-4">
+                                    {{ sign_code }}
+                                </div>
+                                <div class="code-info">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        生成时间: {{ current_time }}
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <!-- 刷新按钮 -->
+                            <button class="btn btn-primary btn-lg" onclick="refreshSignCode()">
+                                <i class="fas fa-sync-alt me-2"></i>
+                                刷新签到码
+                            </button>
+                        </div>
+                    </div>
 
-<div class="container">
-    <div class="row justify-content-md-center mt-5">
+                    <!-- 使用说明 -->
+                    <div class="usage-guide">
+                        <h4 class="text-center mb-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            使用说明
+                        </h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="guide-item">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="guide-icon bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-1"></i>
+                                        </div>
+                                        <h5 class="mb-0">生成签到码</h5>
+                                    </div>
+                                    <p class="text-muted">点击"刷新签到码"按钮生成新的6位数字签到码</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="guide-item">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="guide-icon bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-2"></i>
+                                        </div>
+                                        <h5 class="mb-0">分享签到码</h5>
+                                    </div>
+                                    <p class="text-muted">将生成的签到码告知需要签到的用户</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="guide-item">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="guide-icon bg-warning text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-3"></i>
+                                        </div>
+                                        <h5 class="mb-0">用户签到</h5>
+                                    </div>
+                                    <p class="text-muted">用户在签到页面输入正确的签到码完成签到</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="guide-item">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="guide-icon bg-danger text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-4"></i>
+                                        </div>
+                                        <h5 class="mb-0">安全验证</h5>
+                                    </div>
+                                    <p class="text-muted">系统会自动验证签到码的有效性和时效性</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-        <div class="col-4 mt-5">
-            <div id="qrcode" class="align-items-center w-100 m-5"></div>
-            <p class="mt-4 loading text-center">签到码：{{ sign_code }}</p>
-
+                    <!-- 统计信息 -->
+                    <div class="stats-section mt-5">
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <div class="stat-number text-primary fw-bold fs-2">6</div>
+                                    <div class="stat-label text-muted">位数</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <div class="stat-number text-success fw-bold fs-2">10</div>
+                                    <div class="stat-label text-muted">分钟有效</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <div class="stat-number text-info fw-bold fs-2">100万</div>
+                                    <div class="stat-label text-muted">组合可能</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
-<script>
-    var qrcode = new QRCode(document.getElementById("qrcode"));
-    qrcode.makeCode("http://{{ local_ip }}/index/sign_url/?sign_code={{ sign_code }}");
-</script>
+</main>
+
+<style>
+.sign-code-display {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.code-container {
+    border: 2px dashed #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.code-container:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.1);
+}
+
+.code-text {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 8px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+.guide-icon {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.stat-item {
+    padding: 20px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    margin: 10px;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-qrcode me-2"></i>
+                自习室管理系统 - 签到码生成
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a href="/index/" class="nav-link text-white">
+                    <i class="fas fa-home me-1"></i>返回首页
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 页面内容 -->
+    <main class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-primary text-white text-center py-4">
+                        <h2 class="mb-0"><i class="fas fa-qrcode me-2"></i>签到码生成</h2>
+                    </div>
+                    <div class="card-body p-5">
+                        <!-- 签到码显示区域 -->
+                        <div class="text-center mb-5">
+                            <div class="sign-code-display">
+                                <div class="code-container bg-light rounded-3 p-4 mb-3">
+                                    <h3 class="text-muted mb-3">当前签到码</h3>
+                                    <div class="code-text display-1 fw-bold text-primary mb-4">
+                                        {{ sign_code }}
+                                    </div>
+                                    <div class="code-info">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            生成时间: {{ current_time }}
+                                        </small>
+                                    </div>
+                                </div>
+                                
+                                <!-- 刷新按钮 -->
+                                <button class="btn btn-primary btn-lg" onclick="refreshSignCode()">
+                                    <i class="fas fa-sync-alt me-2"></i>
+                                    刷新签到码
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 使用说明 -->
+                        <div class="usage-guide">
+                            <h4 class="text-center mb-4">
+                                <i class="fas fa-info-circle me-2"></i>
+                                使用说明
+                            </h4>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="guide-item">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="guide-icon bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                                <i class="fas fa-1"></i>
+                                            </div>
+                                            <h5 class="mb-0">生成签到码</h5>
+                                        </div>
+                                        <p class="text-muted">点击"刷新签到码"按钮生成新的6位数字签到码</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="guide-item">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="guide-icon bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                                <i class="fas fa-2"></i>
+                                            </div>
+                                            <h5 class="mb-0">分享签到码</h5>
+                                        </div>
+                                        <p class="text-muted">将生成的签到码告知需要签到的用户</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="guide-item">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="guide-icon bg-warning text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                                <i class="fas fa-3"></i>
+                                            </div>
+                                            <h5 class="mb-0">用户签到</h5>
+                                        </div>
+                                        <p class="text-muted">用户在签到页面输入正确的签到码完成签到</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="guide-item">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="guide-icon bg-danger text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                                <i class="fas fa-4"></i>
+                                            </div>
+                                            <h5 class="mb-0">安全验证</h5>
+                                        </div>
+                                        <p class="text-muted">系统会自动验证签到码的有效性和时效性</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 统计信息 -->
+                        <div class="stats-section mt-5">
+                            <div class="row text-center">
+                                <div class="col-md-4">
+                                    <div class="stat-item">
+                                        <div class="stat-number text-primary fw-bold fs-2">6</div>
+                                        <div class="stat-label text-muted">位数</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="stat-item">
+                                        <div class="stat-number text-success fw-bold fs-2">10</div>
+                                        <div class="stat-label text-muted">分钟有效</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="stat-item">
+                                        <div class="stat-number text-info fw-bold fs-2">100万</div>
+                                        <div class="stat-label text-muted">组合可能</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- JavaScript资源 -->
+    <script src="/static/bootstrap/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+    function refreshSignCode() {
+        // 显示加载动画
+        const refreshBtn = document.querySelector('.btn-primary');
+        const originalText = refreshBtn.innerHTML;
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>生成中...';
+        refreshBtn.disabled = true;
+        
+        // 模拟刷新效果
+        setTimeout(() => {
+            // 实际刷新页面以生成新签到码
+            window.location.reload();
+        }, 1000);
+    }
+
+    // 页面加载完成后添加动画效果
+    document.addEventListener('DOMContentLoaded', function() {
+        // 为统计数字添加计数动画
+        const statNumbers = document.querySelectorAll('.stat-number');
+        statNumbers.forEach((number, index) => {
+            const target = parseInt(number.textContent);
+            let current = 0;
+            const increment = target / 50;
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    number.textContent = target;
+                    clearInterval(timer);
+                } else {
+                    number.textContent = Math.floor(current);
+                }
+            }, 30);
+        });
+    });
+    </script>
 </body>
 </html>
-
-
-

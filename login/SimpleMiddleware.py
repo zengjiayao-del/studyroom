@@ -17,6 +17,18 @@ class SimpleMiddleware:
         # 允许不登录就可以访问的路径
         open_urls = ['/login/', '/login/register/', '/admin/login/', '/admin/logout/', '/captchaHostQuery']
         
+        # 检查管理员后台访问
+        if path.startswith('/admin/') and path != '/admin/login/':
+            # 如果访问管理员后台但未登录管理员，重定向到自定义管理员登录页面
+            # 检查管理员权限：Django认证或自定义会话
+            if not (request.user.is_authenticated and request.user.is_staff) and not request.session.get('is_admin'):
+                return redirect('/login/admin/login/')
+            
+            # 如果通过Django认证但自定义会话未设置，则设置自定义会话
+            if request.user.is_authenticated and request.user.is_staff and not request.session.get('is_admin'):
+                request.session['is_admin'] = True
+                request.session['admin_name'] = {"name": request.user.username}
+        
         # 如果用户未登录
         if 'name' not in request.session:
             # 如果是 AJAX 请求，返回 JSON 响应

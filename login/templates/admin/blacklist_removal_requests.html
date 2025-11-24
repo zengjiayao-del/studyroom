@@ -1,0 +1,242 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}黑名单撤销申请管理 - 自习室预约管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- 左侧导航栏 -->
+        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+            <div class="position-sticky pt-3">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_dashboard' %}">
+                            <i class="fas fa-tachometer-alt"></i>
+                            仪表板
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_user_management' %}">
+                            <i class="fas fa-users"></i>
+                            用户管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_complaint_management' %}">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            投诉管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_blacklist_management' %}">
+                            <i class="fas fa-ban"></i>
+                            黑名单管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{% url 'admin_blacklist_removal_requests' %}">
+                            <i class="fas fa-undo"></i>
+                            撤销申请审核
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_evaluation_management' %}">
+                            <i class="fas fa-star"></i>
+                            评价管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_complaint_feedback' %}">
+                            <i class="fas fa-comments"></i>
+                            投诉反馈
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_data_analysis' %}">
+                            <i class="fas fa-chart-bar"></i>
+                            数据分析
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">黑名单撤销申请管理</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <span class="badge bg-primary">待审核申请: {{ removal_requests|length }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 消息提示 -->
+            {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- 撤销申请列表 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">待审核的撤销申请</h5>
+                </div>
+                <div class="card-body">
+                    {% if removal_requests %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>申请人</th>
+                                    <th>申请时间</th>
+                                    <th>申诉理由</th>
+                                    <th>原黑名单原因</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in removal_requests %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="{% if request.student.avatar %}{{ request.student.avatar.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}" 
+                                                 alt="{{ request.student.name }}" class="rounded-circle me-2" width="32" height="32">
+                                            <div>
+                                                <strong>{{ request.student.name }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ request.student.phone }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ request.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                data-bs-toggle="modal" data-bs-target="#reasonModal{{ request.id }}">
+                                            查看详情
+                                        </button>
+                                    </td>
+                                    <td>{{ request.blacklist.reason|truncatechars:50 }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-success" 
+                                                    data-bs-toggle="modal" data-bs-target="#approveModal{{ request.id }}">
+                                                批准
+                                            </button>
+                                            <button type="button" class="btn btn-danger" 
+                                                    data-bs-toggle="modal" data-bs-target="#rejectModal{{ request.id }}">
+                                                拒绝
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- 申诉理由模态框 -->
+                                <div class="modal fade" id="reasonModal{{ request.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">{{ request.student.name }} 的申诉理由</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>{{ request.appeal_reason }}</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 批准模态框 -->
+                                <div class="modal fade" id="approveModal{{ request.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <form method="post" action="{% url 'admin_blacklist_removal_requests' %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="request_id" value="{{ request.id }}">
+                                                <input type="hidden" name="action" value="approve">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">批准撤销申请</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p>确定要批准 <strong>{{ request.student.name }}</strong> 的黑名单撤销申请吗？</p>
+                                                    <div class="mb-3">
+                                                        <label for="adminCommentApprove{{ request.id }}" class="form-label">管理员备注（可选）</label>
+                                                        <textarea class="form-control" id="adminCommentApprove{{ request.id }}" 
+                                                                  name="admin_comment" rows="3" placeholder="请输入批准理由..."></textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                                    <button type="submit" class="btn btn-success">确认批准</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 拒绝模态框 -->
+                                <div class="modal fade" id="rejectModal{{ request.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <form method="post" action="{% url 'admin_blacklist_removal_requests' %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="request_id" value="{{ request.id }}">
+                                                <input type="hidden" name="action" value="reject">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">拒绝撤销申请</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p>确定要拒绝 <strong>{{ request.student.name }}</strong> 的黑名单撤销申请吗？</p>
+                                                    <div class="mb-3">
+                                                        <label for="adminCommentReject{{ request.id }}" class="form-label">拒绝理由</label>
+                                                        <textarea class="form-control" id="adminCommentReject{{ request.id }}" 
+                                                                  name="admin_comment" rows="3" placeholder="请输入拒绝理由..." required></textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                                    <button type="submit" class="btn btn-danger">确认拒绝</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h5>暂无待审核的撤销申请</h5>
+                        <p class="text-muted">所有撤销申请都已处理完毕</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 自动关闭消息提示
+setTimeout(function() {
+    $('.alert').alert('close');
+}, 5000);
+</script>
+{% endblock %}

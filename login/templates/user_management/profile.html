@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人信息 - 自习室预约系统</title>
+    <!-- 使用更稳定的CDN源 -->
+    <link href="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        .nav-link {
+            color: #495057;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .profile-img {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <div class="col-md-3 col-lg-2 sidebar">
+                <div class="d-flex flex-column flex-shrink-0 p-3">
+                    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
+                        <span class="fs-4">个人中心</span>
+                    </a>
+                    <hr>
+                    <ul class="nav nav-pills flex-column mb-auto">
+                        <li class="nav-item">
+                            <a href="{% url 'user_dashboard' %}" class="nav-link">
+                                <i class="fas fa-home me-2"></i>
+                                首页
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'user_profile' %}" class="nav-link active">
+                                <i class="fas fa-user me-2"></i>
+                                个人信息
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'user_evaluations' %}" class="nav-link">
+                                <i class="fas fa-star me-2"></i>
+                                评价管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'user_complaints' %}" class="nav-link">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                投诉管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/index/" class="nav-link">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                返回首页
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 主内容区 -->
+            <div class="col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">个人信息管理</h1>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">基本信息</h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="post" enctype="multipart/form-data">
+                                    {% csrf_token %}
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="name" class="form-label">姓名</label>
+                                            <input type="text" class="form-control" id="name" name="name" value="{{ user.name }}" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="phone" class="form-label">手机号</label>
+                                            <input type="tel" class="form-control" id="phone" name="phone" value="{{ user.phone }}" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">邮箱</label>
+                                        <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="bio" class="form-label">个人简介</label>
+                                        <textarea class="form-control" id="bio" name="bio" rows="3" placeholder="介绍一下自己...">{{ user.bio }}</textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="preferred_room" class="form-label">常用自习室偏好</label>
+                                        <select class="form-select" id="preferred_room" name="preferred_room">
+                                            <option value="">-- 请选择常用自习室 --</option>
+                                            {% for room in rooms %}
+                                                <option value="{{ room.id }}" {% if user.preferred_room and user.preferred_room.id == room.id %}selected{% endif %}>
+                                                    {{ room.name }} ({{ room.number }}个座位)
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="study_preference" class="form-label">学习偏好</label>
+                                        <select class="form-select" id="study_preference" name="study_preference">
+                                            <option value="quiet" {% if user.study_preference == 'quiet' %}selected{% endif %}>安静学习</option>
+                                            <option value="group" {% if user.study_preference == 'group' %}selected{% endif %}>小组讨论</option>
+                                            <option value="flexible" {% if user.study_preference == 'flexible' %}selected{% endif %}>灵活适应</option>
+                                            <option value="other" {% if user.study_preference == 'other' %}selected{% endif %}>其他</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="photo" class="form-label">头像</label>
+                                        <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
+                                        <div class="form-text">支持 JPG、PNG 格式，大小不超过 2MB</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">注册时间</label>
+                                        <p class="form-control-plaintext">{{ user.time|date:"Y-m-d H:i:s" }}</p>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">上次登录</label>
+                                        <p class="form-control-plaintext">
+                                            {% if user.last_login %}
+                                                {{ user.last_login|date:"Y-m-d H:i:s" }}
+                                            {% else %}
+                                                从未登录
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary">保存修改</button>
+                                    <a href="{% url 'user_dashboard' %}" class="btn btn-secondary">返回</a>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">当前头像</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <img src="/media/{{ user.photo }}" class="rounded-circle profile-img mb-3" alt="当前头像">
+                                <p class="text-muted">点击左侧上传新头像</p>
+                            </div>
+                        </div>
+                        
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">账户状态</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>账户状态:</span>
+                                    <span class="badge bg-success">正常</span>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>活跃状态:</span>
+                                    <span class="badge bg-{% if user.is_active %}success{% else %}danger{% endif %}">
+                                        {% if user.is_active %}活跃{% else %}禁用{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

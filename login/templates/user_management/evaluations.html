@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>评价管理 - 自习室预约系统</title>
+    <!-- 使用更稳定的CDN源 -->
+    <link href="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        .nav-link {
+            color: #495057;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .star-rating {
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <div class="col-md-3 col-lg-2 sidebar">
+                <div class="d-flex flex-column flex-shrink-0 p-3">
+                    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
+                        <span class="fs-4">个人中心</span>
+                    </a>
+                    <hr>
+                    <ul class="nav nav-pills flex-column mb-auto">
+                        <li class="nav-item">
+                            <a href="{% url 'user_dashboard' %}" class="nav-link">
+                                <i class="fas fa-home me-2"></i>
+                                首页
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'user_profile' %}" class="nav-link">
+                                <i class="fas fa-user me-2"></i>
+                                个人信息
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'user_evaluations' %}" class="nav-link active">
+                                <i class="fas fa-star me-2"></i>
+                                评价管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'user_complaints' %}" class="nav-link">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                投诉管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/index/" class="nav-link">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                返回首页
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 主内容区 -->
+            <div class="col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">评价管理</h1>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEvaluationModal">
+                        <i class="fas fa-plus me-2"></i>添加评价
+                    </button>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- 评价列表 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">我的评价记录</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if evaluations %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>自习室</th>
+                                            <th>评分</th>
+                                            <th>评价内容</th>
+                                            <th>评价时间</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for evaluation in evaluations %}
+                                        <tr>
+                                            <td>{{ evaluation.room.name }}</td>
+                                            <td>
+                                                <div class="star-rating">
+                                                    {% for i in "12345" %}
+                                                        {% if forloop.counter <= evaluation.rating %}
+                                                            <i class="fas fa-star"></i>
+                                                        {% else %}
+                                                            <i class="far fa-star"></i>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                    <span class="ms-2">{{ evaluation.rating }}星</span>
+                                                </div>
+                                            </td>
+                                            <td>{{ evaluation.comment|truncatechars:100 }}</td>
+                                            <td>{{ evaluation.time|date:"Y-m-d H:i" }}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-info" onclick="showEvaluationDetail({{ evaluation.id }}, '{{ evaluation.room.name }}', {{ evaluation.rating }}, '{{ evaluation.comment }}', '{{ evaluation.time|date:"Y-m-d H:i" }}')">
+                                                    查看详情
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-star fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">暂无评价记录</p>
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEvaluationModal">
+                                    添加第一条评价
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加评价模态框 -->
+    <div class="modal fade" id="addEvaluationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title">添加评价</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="room_id" class="form-label">选择自习室</label>
+                            <select class="form-select" id="room_id" name="room_id" required>
+                                <option value="">请选择自习室</option>
+                                {% for room in rooms %}
+                                    <option value="{{ room.id }}">{{ room.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">评分</label>
+                            <div class="star-rating">
+                                {% for i in "12345" %}
+                                    <input type="radio" id="star{{ i }}" name="rating" value="{{ i }}" class="d-none">
+                                    <label for="star{{ i }}" class="star-label">
+                                        <i class="far fa-star"></i>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="comment" class="form-label">评价内容</label>
+                            <textarea class="form-control" id="comment" name="comment" rows="4" placeholder="请输入您的评价内容..." required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary">提交评价</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 查看评价详情模态框 -->
+    <div class="modal fade" id="viewEvaluationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">评价详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <strong>自习室:</strong> <span id="detail-room"></span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>评分:</strong>
+                        <div class="star-rating" id="detail-rating"></div>
+                    </div>
+                    <div class="mb-3">
+                        <strong>评价内容:</strong>
+                        <p class="mt-2" id="detail-comment"></p>
+                    </div>
+                    <div class="mb-3">
+                        <strong>评价时间:</strong> <span id="detail-time"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 星级评分交互
+        document.querySelectorAll('.star-label').forEach(label => {
+            label.addEventListener('click', function() {
+                const rating = this.getAttribute('for').replace('star', '');
+                const stars = document.querySelectorAll('.star-label');
+                
+                stars.forEach((star, index) => {
+                    if (index < rating) {
+                        star.innerHTML = '<i class="fas fa-star"></i>';
+                    } else {
+                        star.innerHTML = '<i class="far fa-star"></i>';
+                    }
+                });
+            });
+        });
+
+        // 显示评价详情
+        function showEvaluationDetail(id, room, rating, comment, time) {
+            document.getElementById('detail-room').textContent = room;
+            
+            // 生成星级评分
+            let starsHtml = '';
+            for (let i = 1; i <= 5; i++) {
+                if (i <= rating) {
+                    starsHtml += '<i class="fas fa-star"></i>';
+                } else {
+                    starsHtml += '<i class="far fa-star"></i>';
+                }
+            }
+            starsHtml += `<span class="ms-2">${rating}星</span>`;
+            document.getElementById('detail-rating').innerHTML = starsHtml;
+            
+            document.getElementById('detail-comment').textContent = comment;
+            document.getElementById('detail-time').textContent = time;
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('viewEvaluationModal'));
+            modal.show();
+        }
+    </script>
+</body>
+</html>

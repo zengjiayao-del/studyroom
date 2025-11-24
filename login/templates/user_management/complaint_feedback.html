@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投诉反馈 - 自习室预约系统</title>
+    <!-- 使用更稳定的CDN源 -->
+    <link href="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        .nav-link {
+            color: #495057;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .feedback-item {
+            border-left: 4px solid #007bff;
+            padding-left: 15px;
+            margin-bottom: 20px;
+        }
+        .feedback-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <div class="col-md-3 col-lg-2 sidebar">
+                <div class="d-flex flex-column flex-shrink-0 p-3">
+                    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
+                        <span class="fs-4">个人中心</span>
+                    </a>
+                    <hr>
+                    <ul class="nav nav-pills flex-column mb-auto">
+                        <li class="nav-item">
+                            <a href="{% url 'user_dashboard' %}" class="nav-link">
+                                <i class="fas fa-home me-2"></i>
+                                首页
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'user_profile' %}" class="nav-link">
+                                <i class="fas fa-user me-2"></i>
+                                个人信息
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'user_evaluations' %}" class="nav-link">
+                                <i class="fas fa-star me-2"></i>
+                                评价管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'user_complaints' %}" class="nav-link">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                投诉管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/index/" class="nav-link">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                返回首页
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 主内容区 -->
+            <div class="col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">投诉反馈详情</h1>
+                    <a href="{% url 'user_complaints' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>返回投诉列表
+                    </a>
+                </div>
+
+                <!-- 投诉基本信息 -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">投诉信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>投诉标题:</strong> {{ complaint.title }}</p>
+                                <p><strong>投诉类型:</strong> 
+                                    <span class="badge bg-info">{{ complaint.get_complaint_type_display }}</span>
+                                </p>
+                                <p><strong>投诉时间:</strong> {{ complaint.time|date:"Y-m-d H:i" }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>当前状态:</strong> 
+                                    <span class="badge bg-{% if complaint.status == 'pending' %}secondary{% elif complaint.status == 'processing' %}warning{% elif complaint.status == 'resolved' %}success{% else %}dark{% endif %}">
+                                        {{ complaint.get_status_display }}
+                                    </span>
+                                </p>
+                                <p><strong>投诉人:</strong> {{ complaint.student.name }}</p>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <strong>投诉内容:</strong>
+                            <div class="border rounded p-3 mt-2 bg-light">
+                                {{ complaint.content|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 反馈信息 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-comments me-2"></i>处理反馈
+                            <span class="badge bg-primary ms-2">{{ feedbacks.count }}</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if feedbacks %}
+                            {% for feedback in feedbacks %}
+                            <div class="feedback-item">
+                                <div class="feedback-header">
+                                    <div>
+                                        <strong>{{ feedback.admin_user }}</strong>
+                                        <span class="text-muted ms-2">管理员</span>
+                                    </div>
+                                    <span class="text-muted">{{ feedback.feedback_time|date:"Y-m-d H:i" }}</span>
+                                </div>
+                                <div class="feedback-content">
+                                    {{ feedback.feedback_content|linebreaks }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">暂无处理反馈</p>
+                                <p class="text-muted small">管理员正在处理您的投诉，请耐心等待</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 投诉状态说明 -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">投诉状态说明</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 text-center">
+                                <span class="badge bg-secondary">待处理</span>
+                                <p class="small text-muted mt-1">投诉已提交，等待管理员处理</p>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <span class="badge bg-warning">处理中</span>
+                                <p class="small text-muted mt-1">管理员正在处理您的投诉</p>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <span class="badge bg-success">已解决</span>
+                                <p class="small text-muted mt-1">投诉问题已得到解决</p>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <span class="badge bg-dark">已关闭</span>
+                                <p class="small text-muted mt-1">投诉已关闭</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

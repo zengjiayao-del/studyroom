@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投诉反馈信息管理 - 管理员后台</title>
+    <link href="/static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+        .nav-link {
+            color: #495057;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+        }
+        .feedback-content {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .response-content {
+            background-color: #e8f5e8;
+            border-left: 4px solid #28a745;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <div class="col-md-3 col-lg-2 sidebar">
+                <div class="d-flex flex-column flex-shrink-0 p-3">
+                    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
+                        <span class="fs-4">管理员后台</span>
+                    </a>
+                    <hr>
+                    <ul class="nav nav-pills flex-column mb-auto">
+                        <li class="nav-item">
+                            <a href="/admin/" class="nav-link">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                仪表板
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'admin_user_management' %}" class="nav-link">
+                                <i class="fas fa-users me-2"></i>
+                                用户管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'admin_evaluation_management' %}" class="nav-link">
+                                <i class="fas fa-star me-2"></i>
+                                评价管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'admin_complaint_management' %}" class="nav-link">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                投诉管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'admin_complaint_feedback' %}" class="nav-link active">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                投诉反馈
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'admin_blacklist_management' %}" class="nav-link">
+                                <i class="fas fa-ban me-2"></i>
+                                黑名单管理
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'admin_data_analysis' %}" class="nav-link">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                数据分析
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/index/" class="nav-link">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                返回前台
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 主内容区 -->
+            <div class="col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">投诉反馈信息管理</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <span class="badge bg-primary me-2">总反馈数: {{ feedbacks.count }}</span>
+                        <span class="badge bg-success">已回复: {{ feedbacks|length|add:"0" }}</span>
+                    </div>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- 反馈列表 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">投诉反馈列表</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if feedbacks %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>投诉人</th>
+                                            <th>投诉标题</th>
+                                            <th>反馈内容</th>
+                                            <th>管理员</th>
+                                            <th>反馈时间</th>
+                                            <th>回复状态</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for feedback in feedbacks %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <img src="/media/{{ feedback.complaint.student.photo }}" class="rounded-circle user-avatar me-2" alt="用户头像">
+                                                    <span>{{ feedback.complaint.student.name }}</span>
+                                                </div>
+                                            </td>
+                                            <td>{{ feedback.complaint.title }}</td>
+                                            <td>{{ feedback.feedback_content|truncatechars:50 }}</td>
+                                            <td>{{ feedback.admin_user }}</td>
+                                            <td>{{ feedback.feedback_time|date:"Y-m-d H:i" }}</td>
+                                            <td>
+                                                <span class="badge bg-{% if feedback.admin_response %}success{% else %}warning{% endif %}">
+                                                    {% if feedback.admin_response %}已回复{% else %}待回复{% endif %}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#feedbackDetailModal{{ feedback.id }}">
+                                                        详情
+                                                    </button>
+                                                    {% if not feedback.admin_response %}
+                                                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#respondModal{{ feedback.id }}">
+                                                            回复
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- 反馈详情模态框 -->
+                                        <div class="modal fade" id="feedbackDetailModal{{ feedback.id }}" tabindex="-1">
+                                            <div class="modal-dialog modal-lg">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">投诉反馈详情</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="row mb-3">
+                                                            <div class="col-md-6">
+                                                                <p><strong>投诉人:</strong> {{ feedback.complaint.student.name }}</p>
+                                                                <p><strong>投诉标题:</strong> {{ feedback.complaint.title }}</p>
+                                                                <p><strong>投诉类型:</strong> 
+                                                                    <span class="badge bg-info">{{ feedback.complaint.get_complaint_type_display }}</span>
+                                                                </p>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <p><strong>管理员:</strong> {{ feedback.admin_user }}</p>
+                                                                <p><strong>反馈时间:</strong> {{ feedback.feedback_time|date:"Y-m-d H:i" }}</p>
+                                                                <p><strong>回复状态:</strong> 
+                                                                    <span class="badge bg-{% if feedback.admin_response %}success{% else %}warning{% endif %}">
+                                                                        {% if feedback.admin_response %}已回复{% else %}待回复{% endif %}
+                                                                    </span>
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="mb-3">
+                                                            <strong>投诉内容:</strong>
+                                                            <div class="border rounded p-3 mt-2 bg-light">
+                                                                {{ feedback.complaint.content|linebreaks }}
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="mb-3">
+                                                            <strong>反馈内容:</strong>
+                                                            <div class="feedback-content">
+                                                                {{ feedback.feedback_content|linebreaks }}
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {% if feedback.admin_response %}
+                                                        <div class="mb-3">
+                                                            <strong>管理员回复:</strong>
+                                                            <div class="response-content">
+                                                                {{ feedback.admin_response|linebreaks }}
+                                                                <small class="text-muted">回复时间: {{ feedback.response_time|date:"Y-m-d H:i" }}</small>
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+                                                        
+                                                        <div class="mb-3">
+                                                            <strong>投诉状态:</strong> 
+                                                            <span class="badge bg-{% if feedback.complaint.status == 'pending' %}secondary{% elif feedback.complaint.status == 'processing' %}warning{% elif feedback.complaint.status == 'resolved' %}success{% else %}dark{% endif %}">
+                                                                {{ feedback.complaint.get_status_display }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                                                        {% if not feedback.admin_response %}
+                                                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#respondModal{{ feedback.id }}">
+                                                                回复
+                                                            </button>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- 回复反馈模态框 -->
+                                        <div class="modal fade" id="respondModal{{ feedback.id }}" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <form method="post">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="feedback_id" value="{{ feedback.id }}">
+                                                        <input type="hidden" name="action" value="respond">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title">回复投诉反馈</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <div class="mb-3">
+                                                                <strong>投诉人:</strong> {{ feedback.complaint.student.name }}
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <strong>投诉标题:</strong> {{ feedback.complaint.title }}
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <strong>投诉内容:</strong>
+                                                                <div class="border rounded p-3 bg-light">
+                                                                    {{ feedback.complaint.content|linebreaks }}
+                                                                </div>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <strong>反馈内容:</strong>
+                                                                <div class="feedback-content">
+                                                                    {{ feedback.feedback_content|linebreaks }}
+                                                                </div>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label for="response_content{{ feedback.id }}" class="form-label">管理员回复内容</label>
+                                                                <textarea class="form-control" id="response_content{{ feedback.id }}" name="response_content" rows="5" placeholder="请输入回复内容..." required></textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                                            <button type="submit" class="btn btn-primary">提交回复</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-exclamation-circle fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">暂无投诉反馈记录</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/bootstrap/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

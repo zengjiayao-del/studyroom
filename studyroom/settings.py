@@ -83,7 +83,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'studyroom',  # 数据库名称
         'USER': 'root',        # 数据库用户名
-        'PASSWORD': '123456',  # 数据库密码
+        'PASSWORD': 'zjy20678X@',  # 数据库密码
         'HOST': '127.0.0.1',  # 数据库主机地址
         'PORT': 3306,         # 数据库端口
         'ATOMIC_REQUEST': True,
@@ -153,7 +153,7 @@ SIMPLEUI_LOGO = '/static/img/logo.svg'
 SIMPLEUI_DEFAULT_THEME = 'e-green.css'
 SIMPLEUI_CONFIG = {
     'system_keep': True,
-    'menu_display': ['签到码', '自习室管理', '预约管理', '警告记录', '提示管理', '用户管理'],
+    'menu_display': ['签到码', '自习室管理', '预约管理', '警告记录', '用户管理', '评价管理', '投诉管理', '黑名单管理', '数据分析'],
     'dynamic': True,
     'menus': [{
         'name': '签到码',
@@ -176,12 +176,6 @@ SIMPLEUI_CONFIG = {
             'url': '/admin/login/bookings/'
         }]
     }, {
-        'name': '提示管理',
-        'models': [{
-            'name': '提示列表',
-            'url': '/admin/login/text/'
-        }]
-    }, {
         'name': '警告记录',
         'models': [{
             'name': '警告列表',
@@ -199,9 +193,60 @@ SIMPLEUI_CONFIG = {
                 {
                     'name': '管理员列表',
                     'icon': 'fa fa-user',
-                    'url': 'auth/user/'
-                }]
-        }]
+                    'url': '/admin/auth/user/'
+                }
+            ]
+        },
+        {
+            'name': '评价管理',
+            'icon': 'fas fa-star',
+            'models': [
+                {
+                    'name': '全平台评价管理',
+                    'icon': 'fas fa-list',
+                    'url': '/login/admin/evaluation/management/'
+                }
+            ]
+        },
+        {
+            'name': '投诉管理',
+            'icon': 'fas fa-comments',
+            'models': [
+                {
+                    'name': '用户投诉管理',
+                    'icon': 'fas fa-exclamation-triangle',
+                    'url': '/login/admin/complaint/management/'
+                },
+                {
+                    'name': '投诉反馈信息',
+                    'icon': 'fas fa-exclamation-circle',
+                    'url': '/login/admin/complaint/feedback/'
+                }
+            ]
+        },
+        {
+            'name': '黑名单管理',
+            'icon': 'fas fa-ban',
+            'models': [
+                {
+                    'name': '黑名单管理',
+                    'icon': 'fas fa-ban',
+                    'url': '/login/admin/blacklist/management/'
+                }
+            ]
+        },
+        {
+            'name': '数据分析',
+            'icon': 'fas fa-chart-bar',
+            'models': [
+                {
+                    'name': '数据分析中心',
+                    'icon': 'fas fa-chart-line',
+                    'url': '/login/admin/data/analysis/'
+                }
+            ]
+        }
+    ]
 }
 # 隐藏右侧SimpleUI广告链接和使用分析
 SIMPLEUI_HOME_INFO = False
@@ -267,4 +312,4 @@ SESSION_COOKIE_HTTPONLY = True
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Redirect to this URL after logout (both default admin and potentially custom views)
-LOGOUT_REDIRECT_URL = 'http://localhost:8080/login'
+LOGOUT_REDIRECT_URL = '/admin/login/'

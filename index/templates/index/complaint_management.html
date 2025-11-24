@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+{% extends 'index/base.html' %}
+{% load static %}
+
+{% block title %}用户投诉管理{% endblock %}
+
+{% block index %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">用户投诉管理</h2>
+        <div class="d-flex gap-2">
+            <span class="badge bg-primary">用户: {{ user.name }}</span>
+            <span class="badge bg-info">投诉总数: {{ complaints.count }}</span>
+        </div>
+    </div>
+
+    <!-- 用户基本信息卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <img src="/media/{{ user.photo }}" class="rounded-circle mb-3" width="120" height="120" alt="用户头像">
+                    <h5 class="card-title">{{ user.name }}</h5>
+                    <p class="card-text text-muted">{{ user.email }}</p>
+                    <p class="card-text"><small class="text-muted">注册时间: {{ user.time|date:"Y-m-d" }}</small></p>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'user_management' %}" class="btn btn-outline-primary">返回用户管理</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">投诉说明</h5>
+                </div>
+                <div class="card-body">
+                    <p>在这里您可以查看和管理您的投诉记录。如果您对自习室服务有任何问题或建议，请通过下方的"提交投诉"按钮进行反馈。</p>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>温馨提示：</strong>我们会在收到投诉后尽快处理，并通过系统反馈处理结果。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 投诉管理 -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">投诉记录</h5>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addComplaintModal">
+                <i class="fas fa-plus me-2"></i>提交投诉
+            </button>
+        </div>
+        <div class="card-body">
+            {% if complaints %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>投诉标题</th>
+                                <th>投诉类型</th>
+                                <th>状态</th>
+                                <th>提交时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for complaint in complaints %}
+                            <tr>
+                                <td>{{ complaint.title|truncatechars:30 }}</td>
+                                <td>
+                                    <span class="badge bg-{% if complaint.complaint_type == 'environment' %}success{% elif complaint.complaint_type == 'facility' %}warning{% elif complaint.complaint_type == 'service' %}info{% else %}secondary{% endif %}">
+                                        {{ complaint.get_complaint_type_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if complaint.status == 'pending' %}warning{% elif complaint.status == 'processing' %}info{% elif complaint.status == 'resolved' %}success{% elif complaint.status == 'closed' %}secondary{% else %}danger{% endif %}">
+                                        {{ complaint.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ complaint.time|date:"Y-m-d H:i" }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#complaintDetailModal{{ complaint.id }}">
+                                        详情
+                                    </button>
+                                    {% if complaint.status != 'closed' %}
+                                    <a href="{% url 'complaint_feedback_view' complaint.id %}" class="btn btn-sm btn-outline-success">
+                                        查看反馈
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">暂无投诉记录</p>
+                    <p class="text-muted small">如果您有任何问题或建议，请点击上方的"提交投诉"按钮</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 提交投诉模态框 -->
+<div class="modal fade" id="addComplaintModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">提交投诉</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'submit_complaint' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="complaint_type" class="form-label">投诉类型</label>
+                        <select class="form-select" id="complaint_type" name="complaint_type" required>
+                            <option value="">请选择投诉类型</option>
+                            <option value="environment">环境问题（噪音、卫生等）</option>
+                            <option value="facility">设备问题（桌椅、空调等）</option>
+                            <option value="service">服务问题（管理员态度等）</option>
+                            <option value="other">其他问题</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="complaint_title" class="form-label">投诉标题</label>
+                        <input type="text" class="form-control" id="complaint_title" name="complaint_title" placeholder="请输入投诉标题" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="complaint_content" class="form-label">投诉内容</label>
+                        <textarea class="form-control" id="complaint_content" name="complaint_content" rows="4" placeholder="请详细描述您遇到的问题..." required></textarea>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">提交投诉</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 投诉详情模态框 -->
+{% for complaint in complaints %}
+<div class="modal fade" id="complaintDetailModal{{ complaint.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">投诉详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>投诉标题:</strong> {{ complaint.title }}</p>
+                        <p><strong>投诉类型:</strong> 
+                            <span class="badge bg-{% if complaint.complaint_type == 'environment' %}success{% elif complaint.complaint_type == 'facility' %}warning{% elif complaint.complaint_type == 'service' %}info{% else %}secondary{% endif %}">
+                                {{ complaint.get_complaint_type_display }}
+                            </span>
+                        </p>
+                        <p><strong>当前状态:</strong> 
+                            <span class="badge bg-{% if complaint.status == 'pending' %}warning{% elif complaint.status == 'processing' %}info{% elif complaint.status == 'resolved' %}success{% elif complaint.status == 'closed' %}secondary{% else %}danger{% endif %}">
+                                {{ complaint.get_status_display }}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>提交时间:</strong> {{ complaint.time|date:"Y-m-d H:i" }}</p>
+                        <p><strong>最后更新:</strong> 
+                            {% if complaint.update_time %}
+                                {{ complaint.update_time|date:"Y-m-d H:i" }}
+                            {% else %}
+                                <span class="text-muted">暂无更新</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <hr>
+                <p><strong>投诉内容:</strong></p>
+                <div class="border rounded p-3 bg-light">
+                    {{ complaint.content|linebreaks }}
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 页面加载完成后执行
+$(document).ready(function() {
+    // 提交投诉表单处理
+    $('#addComplaintForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        // 表单验证
+        const formData = new FormData(this);
+        
+        // 使用AJAX提交表单
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 提交成功，刷新页面
+                location.reload();
+            } else {
+                // 显示错误信息
+                alert(data.message || '提交失败');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('提交过程中发生错误');
+        });
+    });
+    
+    // 自动关闭模态框后的处理
+    $('#addComplaintModal').on('hidden.bs.modal', function () {
+        $(this).find('form')[0].reset();
+    });
+});
+</script>
+{% endblock %}
