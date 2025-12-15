@@ -22,7 +22,10 @@ class TodoItem(models.Model):
 class BackgroundMusic(models.Model):
     """背景音乐"""
     title = models.CharField(max_length=100, verbose_name='标题')
+    artist = models.CharField(max_length=100, blank=True, null=True, verbose_name='艺术家')
     audio_file = models.FileField(upload_to='music/', verbose_name='音频文件')
+    # cover_image = models.ImageField(upload_to='music/covers/', blank=True, null=True, verbose_name='封面图片')
+    duration = models.DurationField(blank=True, null=True, verbose_name='时长')
     uploader = models.ForeignKey(Students, on_delete=models.CASCADE, verbose_name='上传者')
     upload_time = models.DateTimeField(auto_now_add=True, verbose_name='上传时间')
     is_active = models.BooleanField(default=True, verbose_name='是否启用')

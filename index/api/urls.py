@@ -18,4 +18,10 @@ urlpatterns = [
     path('todos/add/', views.add_todo, name='api_add_todo'),
     path('todos/<int:todo_id>/update/', views.update_todo, name='api_update_todo'),
     path('todos/<int:todo_id>/delete/', views.delete_todo, name='api_delete_todo'),
+    
+    # 音乐相关
+    path('music/', views.get_music_list, name='api_get_music_list'),
+    
+    # 签到码相关
+    path('get-latest-sign-code/', views.get_latest_sign_code, name='api_get_latest_sign_code'),
 ] 

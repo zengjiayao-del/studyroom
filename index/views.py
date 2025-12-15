@@ -68,8 +68,16 @@ def seat(request, id):
             # print(time)
             try:
                 room_1 = Rooms.objects.get(id=room_selected)
+                # 计算目标日期
+                if time_selected_r == 1:
+                    target_date = timezone.now().date()
+                elif time_selected_r == 2:
+                    target_date = timezone.now().date() + timedelta(days=1)
+                else:
+                    target_date = timezone.now().date()
+                    
                 booking = Bookings.objects.filter(
-                    time__day=time,
+                    booking_date=target_date,
                     period=time_selected_s,
                     room_id=room_1,
                     is_active=True)
@@ -121,7 +129,7 @@ def seat(request, id):
             student = Students.objects.get(name=name)
             existing_booking = Bookings.objects.filter(
                 students_id=student.id,
-                time__date=target_date,
+                booking_date=target_date,
                 period=period,
                 is_active=True
             ).first()
@@ -152,7 +160,8 @@ def seat(request, id):
                     number=int(number),
                     room_id=room_1,
                     period=period,
-                    time=timezone.make_aware(timezone.datetime.combine(target_date, timezone.datetime.min.time()))
+                    booking_date=target_date,  # 预约日期
+                    time=timezone.now()  # 预约时间（创建时间）
                 )
                 if student.email:
                     student_email = student.email
@@ -193,15 +202,13 @@ def recording(request):
     try:
         student = Students.objects.get(name=student_name).id
         booking = Bookings.objects.filter(students_id=student).order_by('-time')
-        # 日期判断
-        d1 = timezone.now()
-        day = int(d1.day)
-        month = int(d1.month)
-        return render(request, 'index/Recording.html', {"booking": booking, "day": day, "month": month, "ip": ip})
+        # 获取当前日期（用于比较）
+        current_date = timezone.now().date()
+        return render(request, 'index/Recording.html', {"booking": booking, "current_date": current_date, "ip": ip})
     except Exception as e:
         print(e)
         # 如果查询出错，返回空列表
-        return render(request, 'index/Recording.html', {"booking": [], "day": 0, "month": 0, "ip": ip})
+        return render(request, 'index/Recording.html', {"booking": [], "current_date": timezone.now().date(), "ip": ip})
 
 
 def warn(request):
@@ -259,11 +266,11 @@ def sign_url(request):
                 return render(request, 'index/sign_url.html', {"alert": alert, "msg": msg})
             try:
 
-                time = int(d1.day)
+                current_date = d1.date()
                 student = Students.objects.get(name=student)
                 book = Bookings.objects.filter(
                     students_id=student.id,
-                    time__day=time,
+                    booking_date=current_date,
                     period=period,
                     is_active=1)
 

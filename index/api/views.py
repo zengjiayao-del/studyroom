@@ -2,9 +2,11 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
-from login.models import Students
+from login.models import Students, SignCode
 from ..models import TodoItem, BackgroundMusic
 import json
+from django.utils import timezone
+from datetime import timedelta
 
 def api_response(data=None, message="", status=200):
     """统一的API响应格式"""
@@ -254,5 +256,56 @@ def change_avatar(request):
         }, "头像修改成功")
     except Students.DoesNotExist:
         return api_response(message="用户不存在", status=404)
+    except Exception as e:
+        return api_response(message=str(e), status=500)
+
+@require_http_methods(["GET"])
+def get_music_list(request):
+    """获取音乐列表API"""
+    try:
+        music_list = BackgroundMusic.objects.filter(is_active=True)
+        music_data = [{
+            "id": music.id,
+            "title": music.title,
+            "artist": music.artist,
+            "file_url": music.audio_file.url if music.audio_file else None,
+            "cover_url": music.cover_image.url if music.cover_image else None,
+            "duration": music.duration,
+            "is_active": music.is_active
+        } for music in music_list]
+        return api_response(music_data)
+    except Exception as e:
+        return api_response(message=str(e), status=500)
+
+@require_http_methods(["GET"])
+def get_latest_sign_code(request):
+    """获取最新签到码API"""
+    try:
+        # 获取最新的签到码（10分钟内有效）
+        ten_minutes_ago = timezone.now() - timedelta(minutes=10)
+        sign_code = SignCode.objects.filter(
+            time__gte=ten_minutes_ago
+        ).order_by('-time').first()
+        
+        if not sign_code:
+            return api_response(
+                message="当前没有有效的签到码，请联系管理员生成新的签到码", 
+                status=404
+            )
+        
+        # 检查签到码是否过期
+        if timezone.now() > sign_code.time + timedelta(minutes=10):
+            return api_response(
+                message="签到码已过期，请联系管理员生成新的签到码", 
+                status=404
+            )
+        
+        # 返回签到码
+        return api_response({
+            "sign_code": str(sign_code.text),
+            "created_time": sign_code.time.strftime("%Y-%m-%d %H:%M:%S"),
+            "expires_in_minutes": int((sign_code.time + timedelta(minutes=10) - timezone.now()).total_seconds() // 60)
+        }, "获取成功")
+        
     except Exception as e:
         return api_response(message=str(e), status=500) 

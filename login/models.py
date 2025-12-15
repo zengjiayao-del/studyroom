@@ -97,8 +97,10 @@ class Bookings(models.Model):
         (3, "未签到"),
         (4, "已取消")
     )
-    period = models.IntegerField(verbose_name="时间", choices=time_choice, default=1)
-    time = models.DateTimeField(verbose_name="创建时间", auto_now_add=True)
+    period = models.IntegerField(verbose_name="时间段", choices=time_choice, default=1)
+    time = models.DateTimeField(verbose_name="预约时间", auto_now_add=True)
+    # 新增：预约日期（要去自习室的日期）
+    booking_date = models.DateField(verbose_name="预约日期", null=True, blank=True)
     is_active = models.IntegerField(verbose_name="活跃状态", choices=is_choice, default=1)
 
     def __str__(self):

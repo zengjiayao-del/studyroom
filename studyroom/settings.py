@@ -127,6 +127,7 @@ USE_TZ = False
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"  # 添加静态文件收集目录
 
 # Media files (User uploaded files)
 MEDIA_URL = '/media/'
