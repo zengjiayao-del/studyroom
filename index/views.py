@@ -224,7 +224,11 @@ def recording(request):
     except Exception as e:
         print(e)
         # 如果查询出错，返回空列表
+<<<<<<< HEAD
         return render(request, 'index/Recording.html', {"booking": [], "current_date": timezone.now().date(), "ip": ip})
+=======
+        return render(request, 'index/Recording.html', {"booking": [], "day": 0, "month": 0, "ip": ip})
+>>>>>>> d3fdd8f653273883590632b92fe29518c3bf8876
 
 
 def warn(request):
@@ -254,7 +258,11 @@ def sign_url(request):
         if code:
             # 获取最新的签到码（10分钟内有效）
             from django.utils import timezone
+<<<<<<< HEAD
             from datetime import timedelta, datetime
+=======
+            from datetime import timedelta
+>>>>>>> d3fdd8f653273883590632b92fe29518c3bf8876
             
             ten_minutes_ago = timezone.now() - timedelta(minutes=10)
             sign = SignCode.objects.filter(time__gte=ten_minutes_ago).order_by('-time').first()

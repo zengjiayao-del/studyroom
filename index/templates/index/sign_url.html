@@ -45,6 +45,7 @@
             box-shadow: 0 6px 15px rgba(25, 135, 84, 0.3);
         }
 
+<<<<<<< HEAD
         .btn-primary {
             background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
             border: none;
@@ -81,6 +82,8 @@
             to { opacity: 1; }
         }
 
+=======
+>>>>>>> d3fdd8f653273883590632b92fe29518c3bf8876
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -145,6 +148,7 @@
                                            pattern="[0-9]{6}" 
                                            required
                                            autocomplete="off">
+<<<<<<< HEAD
                                     <button type="button" 
                                             class="btn btn-outline-info" 
                                             id="get_code_btn"
@@ -180,6 +184,19 @@
                                         获取验证码
                                     </button>
                                 </div>
+=======
+                                </div>
+                                <div class="form-text text-muted">
+                                    请输入管理员提供的6位数字签到码
+                                </div>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="fas fa-sign-in-alt me-2"></i>
+                                    确认签到
+                                </button>
+>>>>>>> d3fdd8f653273883590632b92fe29518c3bf8876
                             </div>
                         </form>
 
@@ -238,6 +255,7 @@
     <script src="/static/bootstrap/js/bootstrap.bundle.min.js"></script>
     
     <script>
+<<<<<<< HEAD
     // 获取最新签到码
     function getLatestSignCode() {
         const codeStatus = document.getElementById('code_status');
@@ -329,6 +347,8 @@
         return cookieValue;
     }
     
+=======
+>>>>>>> d3fdd8f653273883590632b92fe29518c3bf8876
     // 自动聚焦到输入框
     document.addEventListener('DOMContentLoaded', function() {
         const signCodeInput = document.getElementById('sign_code');
