@@ -42,10 +42,10 @@
                 <h6 class="m-2 mt-3 text-center">请选择座位号：（
                     {{ room_1 }}
 
-                    {% if time_selected_r == 1 %}
+                    {% if time_selected_r %}
+                        {{ time_selected_r }}
+                    {% else %}
                         今天
-                    {% elif time_selected_r == 2 %}
-                        明天
                     {% endif %}
                     {% if time_selected_s == 1 %}
                         上午

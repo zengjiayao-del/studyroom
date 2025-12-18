@@ -35,10 +35,18 @@
 
                 <div class="col-md-3">
                     <label for="inputState" class="form-label">日期</label>
-                    <select name="day" id="inputState" class="form-select">
-                        <option value="1" {% if time_selected_r == 1 %} selected {% endif %}>今天</option>
-                        <option value="2" {% if time_selected_r == 2 %} selected {% endif %}>明天</option>
-                    </select>
+                    <div class="input-group">
+                        <input type="date" name="day" id="dateInput" class="form-control" 
+                               min="{{ today }}" max="{{ max_date }}" 
+                               {% if selected_date %}value="{{ selected_date }}"{% else %}value="{{ today }}"{% endif %}
+                               style="display: none;">
+                        <input type="text" id="dateDisplay" class="form-control" 
+                               readonly placeholder="选择日期" 
+                               value="{% if selected_date %}{{ selected_date|date:'Y年m月d日' }}{% else %}{{ today|date:'Y年m月d日' }}{% endif %}">
+                        <button type="button" class="btn btn-outline-secondary" id="dateButton">
+                            <i class="fas fa-calendar"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="col-md-3">
                     <label for="inputState" class="form-label">时间段</label>
@@ -65,5 +73,311 @@
             {% endblock %}
         </div>
     </main>
+
+    <style>
+        /* 美化日期选择器 */
+        input[type="date"] {
+            background-color: white;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            padding: 0.375rem 0.75rem;
+            font-size: 1rem;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+        
+        input[type="date"]:focus {
+            border-color: #86b7fe;
+            outline: 0;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            filter: invert(0.5);
+        }
+        
+        /* 日期显示框样式 */
+        #dateDisplay {
+            background-color: white;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        #dateDisplay:hover {
+            background-color: #f8f9fa;
+        }
+        
+        #dateButton {
+            border-left: none;
+        }
+        
+        /* 确保表单select和input高度一致 */
+        .form-select {
+            height: auto;
+            min-height: 38px;
+        }
+        
+        .input-group .form-control {
+            border-right: none;
+        }
+        
+        .input-group .form-control:last-child {
+            border-right: 1px solid #ced4da;
+        }
+        
+        .input-group .btn {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+    </style>
+    
+    <script>
+    // 日期选择器功能
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInput = document.getElementById('dateInput');
+        const dateDisplay = document.getElementById('dateDisplay');
+        const dateButton = document.getElementById('dateButton');
+        
+        // 设置日期范围限制
+        if (dateInput) {
+            const today = new Date().toISOString().split('T')[0];
+            const maxDate = new Date();
+            maxDate.setDate(maxDate.getDate() + 30);
+            const maxDateStr = maxDate.toISOString().split('T')[0];
+            
+            dateInput.min = today;
+            dateInput.max = maxDateStr;
+        }
+        
+        // 格式化日期显示
+        function formatDateDisplay(dateString) {
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            return `${year}年${month}月${day}日`;
+        }
+        
+        // 创建自定义日期选择器
+        function createCustomDatePicker() {
+            const picker = document.createElement('div');
+            picker.style.cssText = `
+                position: absolute;
+                background: white;
+                border: 1px solid #ced4da;
+                border-radius: 0.375rem;
+                padding: 0.5rem;
+                box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+                z-index: 1000;
+                display: none;
+                min-width: 280px;
+            `;
+            
+            // 创建简化的月历视图
+            const currentDate = new Date(dateInput.value || new Date());
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            // 创建头部
+            const header = document.createElement('div');
+            header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-weight: bold;';
+            header.innerHTML = `
+                <button type="button" id="prevMonth" style="border: none; background: none; cursor: pointer;">‹</button>
+                <span id="monthYear">${year}年${month + 1}月</span>
+                <button type="button" id="nextMonth" style="border: none; background: none; cursor: pointer;">›</button>
+            `;
+            picker.appendChild(header);
+            
+            // 创建星期标题
+            const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+            const weekHeader = document.createElement('div');
+            weekHeader.style.cssText = 'display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 0.875rem; color: #6c757d; margin-bottom: 0.25rem;';
+            weekDays.forEach(day => {
+                const dayDiv = document.createElement('div');
+                dayDiv.textContent = day;
+                weekHeader.appendChild(dayDiv);
+            });
+            picker.appendChild(weekHeader);
+            
+            // 创建日期网格
+            const daysGrid = document.createElement('div');
+            daysGrid.style.cssText = 'display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem;';
+            daysGrid.id = 'daysGrid';
+            picker.appendChild(daysGrid);
+            
+            document.body.appendChild(picker);
+            return picker;
+        }
+        
+        // 填充日历日期
+        function populateCalendar(year, month) {
+            const daysGrid = document.getElementById('daysGrid');
+            const monthYear = document.getElementById('monthYear');
+            
+            if (!daysGrid || !monthYear) return;
+            
+            monthYear.textContent = `${year}年${month + 1}月`;
+            daysGrid.innerHTML = '';
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            
+            // 填充空白日期
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDiv = document.createElement('div');
+                daysGrid.appendChild(emptyDiv);
+            }
+            
+            // 填充日期
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayDiv = document.createElement('div');
+                const currentDate = new Date(year, month, day);
+                const dateStr = currentDate.toISOString().split('T')[0];
+                const minDate = dateInput.min;
+                const maxDate = dateInput.max;
+                
+                dayDiv.style.cssText = `
+                    text-align: center; 
+                    padding: 0.25rem; 
+                    cursor: pointer; 
+                    border-radius: 0.25rem;
+                    font-size: 0.875rem;
+                `;
+                
+                // 检查日期是否在允许范围内
+                if (dateStr < minDate || dateStr > maxDate) {
+                    dayDiv.style.opacity = '0.3';
+                    dayDiv.style.cursor = 'not-allowed';
+                } else {
+                    dayDiv.addEventListener('click', function() {
+                        selectDate(dateStr);
+                    });
+                    
+                    // 高亮今天
+                    if (dateStr === todayStr) {
+                        dayDiv.style.backgroundColor = '#e3f2fd';
+                        dayDiv.style.color = '#1976d2';
+                    }
+                    
+                    // 高亮选中的日期
+                    if (dateStr === dateInput.value) {
+                        dayDiv.style.backgroundColor = '#007bff';
+                        dayDiv.style.color = 'white';
+                    }
+                    
+                    // hover效果
+                    dayDiv.addEventListener('mouseenter', function() {
+                        if (this.style.cursor !== 'not-allowed') {
+                            this.style.backgroundColor = '#f8f9fa';
+                        }
+                    });
+                    
+                    dayDiv.addEventListener('mouseleave', function() {
+                        if (this.style.cursor !== 'not-allowed' && dateStr !== dateInput.value && dateStr !== todayStr) {
+                            this.style.backgroundColor = '';
+                        }
+                    });
+                }
+                
+                dayDiv.textContent = day;
+                daysGrid.appendChild(dayDiv);
+            }
+        }
+        
+        // 选择日期
+        function selectDate(dateStr) {
+            dateInput.value = dateStr;
+            dateDisplay.value = formatDateDisplay(dateStr);
+            hideDatePicker();
+        }
+        
+        // 显示日期选择器
+        let customPicker = null;
+        function showDatePicker() {
+            if (!customPicker) {
+                customPicker = createCustomDatePicker();
+            }
+            
+            const rect = dateDisplay.getBoundingClientRect();
+            customPicker.style.top = (rect.bottom + window.scrollY + 2) + 'px';
+            customPicker.style.left = rect.left + 'px';
+            customPicker.style.display = 'block';
+            
+            // 填充当前月份的日历
+            const currentMonth = new Date(dateInput.value || new Date());
+            populateCalendar(currentMonth.getFullYear(), currentMonth.getMonth());
+            
+            // 添加月份切换事件
+            document.getElementById('prevMonth').onclick = function() {
+                const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1);
+                populateCalendar(newDate.getFullYear(), newDate.getMonth());
+                currentMonth.setMonth(newDate.getMonth());
+            };
+            
+            document.getElementById('nextMonth').onclick = function() {
+                const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1);
+                populateCalendar(newDate.getFullYear(), newDate.getMonth());
+                currentMonth.setMonth(newDate.getMonth());
+            };
+            
+            // 点击其他地方关闭选择器
+            setTimeout(() => {
+                document.addEventListener('click', hideDatePickerOutside);
+            }, 100);
+        }
+        
+        // 隐藏日期选择器
+        function hideDatePicker() {
+            if (customPicker) {
+                customPicker.style.display = 'none';
+                document.removeEventListener('click', hideDatePickerOutside);
+            }
+        }
+        
+        // 点击外部关闭选择器
+        function hideDatePickerOutside(e) {
+            if (!customPicker.contains(e.target) && e.target !== dateDisplay && e.target !== dateButton) {
+                hideDatePicker();
+            }
+        }
+        
+        // 点击按钮时打开自定义日期选择器
+        if (dateButton) {
+            dateButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (customPicker && customPicker.style.display === 'block') {
+                    hideDatePicker();
+                } else {
+                    showDatePicker();
+                }
+            });
+        }
+        
+        // 点击显示框时也打开自定义日期选择器
+        if (dateDisplay) {
+            dateDisplay.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (customPicker && customPicker.style.display === 'block') {
+                    hideDatePicker();
+                } else {
+                    showDatePicker();
+                }
+            });
+        }
+        
+        // 当日期改变时更新显示
+        if (dateInput && dateDisplay) {
+            dateInput.addEventListener('change', function() {
+                const selectedDate = this.value;
+                if (selectedDate) {
+                    dateDisplay.value = formatDateDisplay(selectedDate);
+                    console.log('日期已选择:', selectedDate);
+                }
+            });
+        }
+    });
+    </script>
 
 {% endblock %}

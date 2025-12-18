@@ -23,7 +23,7 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 import os
 from django.views import View
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 # Create your views here.
 
@@ -51,30 +51,30 @@ def seat(request, id):
         rooms = Rooms.objects.filter(is_active=True)
     except Exception as e:
         print(e)
+    
+    # 计算今天和最大日期（一个月后）
+    today = timezone.now().date()
+    max_date = today + timedelta(days=30)
+    
     if request.method == "GET":
         room_selected = request.GET.get('room_id')
         if room_selected:
 
-            time_selected_r = int(request.GET.get('day'))  # 日期
-            time_selected_s = int(request.GET.get('time'))  # 时间
+            selected_date_str = request.GET.get('day')  # 日期字符串
+            time_selected_s = int(request.GET.get('time'))  # 时间段
 
-            # 日期判断
-            d1 = timezone.now()
-            time = int(d1.day)
-            if time_selected_r == 1:
-                time = time
-            elif time_selected_r == 2:
-                time = time + 1
-            # print(time)
             try:
                 room_1 = Rooms.objects.get(id=room_selected)
-                # 计算目标日期
-                if time_selected_r == 1:
-                    target_date = timezone.now().date()
-                elif time_selected_r == 2:
-                    target_date = timezone.now().date() + timedelta(days=1)
+                # 解析选择的日期
+                if selected_date_str:
+                    target_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
                 else:
-                    target_date = timezone.now().date()
+                    target_date = today
+                    
+                # 验证日期是否在允许范围内
+                if target_date < today or target_date > max_date:
+                    # 如果日期超出范围，默认使用今天
+                    target_date = today
                     
                 booking = Bookings.objects.filter(
                     booking_date=target_date,
@@ -84,25 +84,35 @@ def seat(request, id):
 
             except Exception as e:
                 print(e)
+                target_date = today
+                booking = Bookings.objects.none()
+                
             seat_dict = {}
             for i in range(1, room.number + 1):
                 seat_dict[str(i)] = 0
             for i in booking:
-                # print("座位号", i.id)
                 seat_dict[str(i.number)] = 1
 
             return render(request, 'index/seat_id.html', {"room": room,
                                                           "rooms": rooms,
                                                           "seat": seat_dict,
                                                           "room_id": room_selected,  # 选择上页自习室一致
-                                                          "time_selected_r": time_selected_r,
+                                                          "time_selected_r": selected_date_str,
                                                           "time_selected_s": time_selected_s,
                                                           "room_1": room_1.name,
                                                           })
         else:
+            # 初始加载时获取默认日期参数
+            selected_date = request.GET.get('day')
+            if not selected_date:
+                selected_date = today.strftime('%Y-%m-%d')
+            
             return render(request, 'index/seat.html', {"room": room,
                                                        "rooms": rooms,
-                                                       "room_id": room.id})
+                                                       "room_id": room.id,
+                                                       "today": today.strftime('%Y-%m-%d'),
+                                                       "max_date": max_date.strftime('%Y-%m-%d'),
+                                                       "selected_date": selected_date})
     elif request.method == 'POST':
         try:
             room_1 = request.POST['room']
@@ -110,19 +120,25 @@ def seat(request, id):
             period = int(request.POST['time'])
             name = request.session.get('name')
             name = name['name']
-            day_selection = int(request.POST['day'])
-            # print(room_1, number, period, day_selection, name)
+            selected_date_str = request.POST['day']
+            # print(room_1, number, period, selected_date_str, name)
         except Exception as e:
             print(f"Error parsing POST data: {e}")
             return HttpResponseRedirect(request.path_info)
 
-        today_date = timezone.now().date()
-        if day_selection == 1:
-            target_date = today_date
-        elif day_selection == 2:
-            target_date = today_date + timedelta(days=1)
-        else:
-            print("Invalid day selection received in POST")
+        # 解析选择的日期
+        try:
+            target_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+            today_date = timezone.now().date()
+            max_date = today_date + timedelta(days=30)
+            
+            # 验证日期是否在允许范围内
+            if target_date < today_date or target_date > max_date:
+                print("Date out of allowed range")
+                return HttpResponseRedirect(request.path_info)
+                
+        except ValueError:
+            print("Invalid date format received in POST")
             return HttpResponseRedirect(request.path_info)
 
         try:
@@ -238,7 +254,7 @@ def sign_url(request):
         if code:
             # 获取最新的签到码（10分钟内有效）
             from django.utils import timezone
-            from datetime import timedelta
+            from datetime import timedelta, datetime
             
             ten_minutes_ago = timezone.now() - timedelta(minutes=10)
             sign = SignCode.objects.filter(time__gte=ten_minutes_ago).order_by('-time').first()
