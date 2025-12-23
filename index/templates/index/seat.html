@@ -140,21 +140,20 @@
         
         // 设置日期范围限制
         if (dateInput) {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             const maxDate = new Date();
             maxDate.setDate(maxDate.getDate() + 30);
-            const maxDateStr = maxDate.toISOString().split('T')[0];
+            const maxDateStr = `${maxDate.getFullYear()}-${String(maxDate.getMonth() + 1).padStart(2, '0')}-${String(maxDate.getDate()).padStart(2, '0')}`;
             
-            dateInput.min = today;
+            dateInput.min = todayStr;
             dateInput.max = maxDateStr;
         }
         
         // 格式化日期显示
         function formatDateDisplay(dateString) {
-            const date = new Date(dateString);
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            const day = date.getDate();
+            // 将 YYYY-MM-DD 格式分解以避免时区问题
+            const [year, month, day] = dateString.split('-').map(Number);
             return `${year}年${month}月${day}日`;
         }
         
@@ -221,8 +220,9 @@
             
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
+            // 避免时区问题：使用本地时间构建今天日期字符串
             const today = new Date();
-            const todayStr = today.toISOString().split('T')[0];
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             
             // 填充空白日期
             for (let i = 0; i < firstDay; i++) {
@@ -233,8 +233,8 @@
             // 填充日期
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayDiv = document.createElement('div');
-                const currentDate = new Date(year, month, day);
-                const dateStr = currentDate.toISOString().split('T')[0];
+                // 避免时区问题：手动构建日期字符串
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const minDate = dateInput.min;
                 const maxDate = dateInput.max;
                 

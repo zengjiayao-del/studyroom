@@ -1,29 +1,219 @@
 {% extends 'index/base.html' %}
 {% block title %}
-    预约记录
+    警告记录
 {% endblock %}
 {% block warn_active %}
     active
 {% endblock %}
 {% block index %}
     <main class="container">
-        {% for i in integrals %}
-
-
-            <div class="bg-danger p-5 rounded mt-3">
-                <h2>{{ i.title }}</h2>
-                <p class="lead">{{ i.text }}</p>
-                <p class="lead">时间：{{ i.time }}</p>
-
+        <!-- 警告数量统计和黑名单提醒 -->
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h5 class="mb-2">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        警告统计
+                    </h5>
+                    <p class="mb-0">
+                        您当前有 <strong class="text-danger">{{ warning_count }}</strong> 条警告记录。
+                        {% if warning_count == 0 %}
+                            <span class="text-success">保持良好记录！</span>
+                        {% elif warning_count == 1 %}
+                            <span class="text-warning">还剩 <strong>{{ remaining_warnings }}</strong> 次警告机会</span>
+                        {% elif show_blacklist_warning %}
+                            <span class="text-danger">⚠️ 再收到 <strong>{{ remaining_warnings }}</strong> 次警告将被加入黑名单！</span>
+                        {% else %}
+                            <span class="text-danger">🚫 您已达到警告上限，请注意遵守规定！</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="ms-3">
+                    {% if show_blacklist_warning %}
+                        <div class="text-center">
+                            <div class="bg-danger text-white rounded-circle p-3" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
+                                <div>
+                                    <div style="font-size: 24px; font-weight: bold;">{{ warning_count }}</div>
+                                    <div style="font-size: 12px;">/ 3</div>
+                                </div>
+                            </div>
+                            <small class="text-danger d-block mt-1">警告风险</small>
+                        </div>
+                    {% elif warning_count == 1 %}
+                        <div class="text-center">
+                            <div class="bg-warning text-white rounded-circle p-3" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
+                                <div>
+                                    <div style="font-size: 24px; font-weight: bold;">{{ warning_count }}</div>
+                                    <div style="font-size: 12px;">/ 3</div>
+                                </div>
+                            </div>
+                            <small class="text-warning d-block mt-1">注意警告</small>
+                        </div>
+                    {% else %}
+                        <div class="text-center">
+                            <div class="bg-success text-white rounded-circle p-3" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
+                                <div>
+                                    <div style="font-size: 24px; font-weight: bold;">{{ warning_count }}</div>
+                                    <div style="font-size: 12px;">/ 3</div>
+                                </div>
+                            </div>
+                            <small class="text-success d-block mt-1">良好记录</small>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
 
-        {% endfor %}
+        <!-- 黑名单严重警告 -->
+        {% if show_blacklist_warning %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h5 class="mb-2">
+                        <i class="fas fa-ban me-2"></i>
+                        黑名单警告
+                    </h5>
+                    <p class="mb-0">
+                        <strong>重要提醒：</strong>您已收到 {{ warning_count }} 次警告，
+                        根据自习室管理规定，累计达到<strong class="text-danger">3次警告</strong>将被自动加入黑名单，
+                        黑名单期间将无法预约座位。请务必遵守自习室各项规定，避免进一步的违规行为。
+                    </p>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            黑名单影响：无法预约座位、无法签到、限制使用自习室服务
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
+        <!-- 警告记录标题 -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <h4 class="mb-3">
+                    <i class="fas fa-list-alt me-2"></i>
+                    警告记录详情
+                    {% if warning_count > 0 %}
+                        <span class="badge bg-danger ms-2">{{ warning_count }} 条</span>
+                    {% endif %}
+                </h4>
+            </div>
+        </div>
+
+        <!-- 警告记录列表 -->
+        {% if integrals %}
+            {% for i in integrals %}
+                <div class="card border-danger mb-3">
+                    <div class="card-header bg-danger text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                {{ i.title }}
+                            </h5>
+                            <span class="badge bg-light text-danger">警告 #{{ forloop.counter }}</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">{{ i.text }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                时间：{{ i.time|date:"Y年m月d日 H:i" }}
+                            </small>
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-gavel me-1"></i>
+                                违规记录
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <!-- 无警告记录时的提示 -->
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-check-circle text-success" style="font-size: 64px;"></i>
+                </div>
+                <h4 class="text-success mb-3">暂无警告记录</h4>
+                <p class="text-muted mb-4">
+                    恭喜您！您目前没有任何警告记录，请继续保持良好的使用习惯。
+                </p>
+                <div class="alert alert-success" style="max-width: 500px; margin: 0 auto;">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        温馨提示
+                    </h6>
+                    <p class="mb-2">
+                        为了保持良好的记录，请注意：
+                    </p>
+                    <ul class="mb-0 text-start">
+                        <li>按时签到，不要迟到</li>
+                        <li>遵守自习室安静规定</li>
+                        <li>保持座位整洁</li>
+                        <li>按时离开，不要占用座位</li>
+                    </ul>
+                </div>
+            </div>
+        {% endif %}
     </main>
-    <br class="mt-5">
-    <br class="mt-5">
-    <br class="mt-5">
-    <br class="mt-5">
-    <br class="mt-5">
-    <br class="mt-5">
-    <br class="mt-5">
+
+    <style>
+        .alert {
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .card {
+            transition: transform 0.2s ease-in-out;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .badge {
+            font-size: 0.8em;
+        }
+        
+        .rounded-circle {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+            }
+        }
+        
+        .bg-warning .rounded-circle {
+            animation: pulse-warning 2s infinite;
+        }
+        
+        @keyframes pulse-warning {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+            }
+        }
+        
+        .bg-success .rounded-circle {
+            animation: none;
+        }
+    </style>
 {% endblock %}

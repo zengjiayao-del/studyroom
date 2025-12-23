@@ -224,11 +224,7 @@ def recording(request):
     except Exception as e:
         print(e)
         # 如果查询出错，返回空列表
-<<<<<<< HEAD
         return render(request, 'index/Recording.html', {"booking": [], "current_date": timezone.now().date(), "ip": ip})
-=======
-        return render(request, 'index/Recording.html', {"booking": [], "day": 0, "month": 0, "ip": ip})
->>>>>>> d3fdd8f653273883590632b92fe29518c3bf8876
 
 
 def warn(request):
@@ -242,7 +238,18 @@ def warn(request):
         student_name = student_session['name']
         student = Students.objects.get(name=student_name)
         integrals = Integrals.objects.filter(is_active=True, student_id=student.id)
-        return render(request, 'index/warn.html', {"integrals": integrals})
+        warning_count = integrals.count()
+        
+        # 检查是否需要显示黑名单警告
+        show_blacklist_warning = warning_count >= 2
+        remaining_warnings = max(0, 3 - warning_count)
+        
+        return render(request, 'index/warn.html', {
+            "integrals": integrals,
+            "warning_count": warning_count,
+            "show_blacklist_warning": show_blacklist_warning,
+            "remaining_warnings": remaining_warnings
+        })
     except Exception as e:
         print(f"警告记录页面错误: {e}")
         # 如果出现其他错误，也重定向到登录页面
@@ -258,11 +265,7 @@ def sign_url(request):
         if code:
             # 获取最新的签到码（10分钟内有效）
             from django.utils import timezone
-<<<<<<< HEAD
             from datetime import timedelta, datetime
-=======
-            from datetime import timedelta
->>>>>>> d3fdd8f653273883590632b92fe29518c3bf8876
             
             ten_minutes_ago = timezone.now() - timedelta(minutes=10)
             sign = SignCode.objects.filter(time__gte=ten_minutes_ago).order_by('-time').first()

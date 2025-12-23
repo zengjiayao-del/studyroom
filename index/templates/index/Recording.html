@@ -52,8 +52,6 @@
                             {% endif %}
                         </h5>
                         <p class="text-center">
-
-<<<<<<< HEAD
                             {% if i.is_active == 1 %}
                                 {% if i.booking_date %}
                                     {% if i.booking_date >= current_date %}
@@ -76,15 +74,6 @@
                                 {% endif %}
                                 
                                 <!-- 取消预约模态框 -->
-=======
-                            {% if i.time.day >= day and i.is_active == 1 and  month <= i.time.month %}
-                                <a href="{% url 'sign_url' %}" class="btn btn-outline-success">验证码签到</a>
-                                                                <a href="{% url 'sign_url' %}" class="btn btn-outline-info">
-                                                                    <i class="fas fa-qrcode"></i> 扫码签到
-                                                                </a>
-                                <a type="button" class="btn btn-outline-success" data-bs-toggle="modal"
-                                   data-bs-target="#exampleModal-{{ i.id }}">取消预约</a>
->>>>>>> d3fdd8f653273883590632b92fe29518c3bf8876
                                 <div class="modal fade" id="exampleModal-{{ i.id }}" tabindex="-1"
                                      aria-labelledby="exampleModalLabel"
                                      aria-hidden="true">
